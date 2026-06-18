@@ -29,8 +29,8 @@ export default function ResetPasswordPage() {
       await authService.resetPassword(token, newPassword);
       setDone(true);
       setTimeout(() => router.push('/login'), 3000);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || 'El link es inválido o ha expirado';
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'El link es inválido o ha expirado';
       toast.error(msg);
     } finally {
       setLoading(false);

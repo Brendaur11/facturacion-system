@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { Plus, Download, Clock, CheckCircle2, XCircle, AlertCircle, FileText, Sheet, FileType, FileSpreadsheet, Mail, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AppLayout } from '@/components/layout/app-layout';
-import { Button, buttonVariants } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { buttonVariants } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { facturasService } from '@/services/facturas.service';
 import { exportService } from '@/services/export.service';
@@ -48,7 +48,7 @@ export default function FacturasPage() {
   useEffect(() => { load(); }, [filtroEstado]);
 
   function toggleSelect(id: string) {
-    setSelected((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
+    setSelected((prev) => { const next = new Set(prev); if (next.has(id)) { next.delete(id); } else { next.add(id); } return next; });
   }
   function toggleAll() {
     setSelected(selected.size === facturas.length ? new Set() : new Set(facturas.map((f) => f.id)));
@@ -68,8 +68,8 @@ export default function FacturasPage() {
     try {
       const { email } = await facturasService.sendEmail(id);
       toast.success(`Factura enviada a ${email}`);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message ?? 'Error al enviar el email';
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Error al enviar el email';
       toast.error(msg);
     } finally {
       setSendingEmail((prev) => { const next = new Set(prev); next.delete(id); return next; });

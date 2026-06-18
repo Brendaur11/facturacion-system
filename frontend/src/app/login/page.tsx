@@ -42,7 +42,7 @@ export default function LoginPage() {
 
         <div>
           <blockquote className="text-white/80 text-xl font-light leading-relaxed">
-            "Gestioná tus facturas, clientes y productos desde un solo lugar."
+            &ldquo;Gestioná tus facturas, clientes y productos desde un solo lugar.&rdquo;
           </blockquote>
           <div className="mt-8 grid grid-cols-3 gap-4">
             {[

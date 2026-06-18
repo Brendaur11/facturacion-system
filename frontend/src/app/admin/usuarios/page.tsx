@@ -68,8 +68,8 @@ export default function AdminUsuariosPage() {
       }
       setDialogOpen(false);
       load();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Error al guardar el usuario');
+    } catch (err) {
+      toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Error al guardar el usuario');
     } finally { setSaving(false); }
   }
 

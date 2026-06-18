@@ -113,8 +113,8 @@ export default function PerfilPage() {
       setNewPassword('');
       setConfirmPassword('');
       toast.success('Contraseña actualizada');
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || 'No se pudo cambiar la contraseña';
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'No se pudo cambiar la contraseña';
       toast.error(msg);
     } finally {
       setSavingPass(false);
