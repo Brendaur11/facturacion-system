@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FacturApp — Demo</title>
+
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+<!-- SheetJS XLSX -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- FileSaver -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<!-- docx (UMD) -->
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg2: #f7f7f5;
+    --bg3: #f0f0ec;
+    --bg-info: #e6f1fb;
+    --txt: #1a1a18;
+    --txt2: #6b6b67;
+    --txt3: #9b9b96;
+    --txt-info: #185fa5;
+    --border: rgba(0,0,0,0.1);
+    --border2: rgba(0,0,0,0.18);
+    --radius: 8px;
+    --radius-lg: 12px;
+    --sidebar-w: 210px;
+    --font: 'Segoe UI', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--bg3); color: var(--txt); font-size: 14px; height: 100vh; display: flex; flex-direction: column; }
+  a { color: inherit; text-decoration: none; }
+
+  /* Layout */
+  .shell { display: flex; flex: 1; overflow: hidden; }
+  .sidebar { width: var(--sidebar-w); background: var(--bg2); border-right: 0.5px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+  .sidebar-logo { padding: 18px 16px 14px; border-bottom: 0.5px solid var(--border); }
+  .sidebar-logo h1 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .sidebar-logo p { font-size: 12px; color: var(--txt2); margin-top: 3px; }
+  .nav { flex: 1; padding: 10px 8px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: var(--radius); cursor: pointer; font-size: 13px; color: var(--txt2); transition: all .15s; margin-bottom: 2px; }
+  .nav-item:hover { background: var(--bg3); color: var(--txt); }
+  .nav-item.active { background: var(--bg); color: var(--txt); font-weight: 500; border: 0.5px solid var(--border); }
+  .sidebar-foot { padding: 12px; border-top: 0.5px solid var(--border); font-size: 13px; color: var(--txt2); display: flex; align-items: center; gap: 8px; }
+  .ava { width: 28px; height: 28px; border-radius: 50%; background: #e8e5fd; color: #5040b5; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+  /* Main */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .topbar { padding: 13px 22px; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--bg); flex-shrink: 0; }
+  .topbar h2 { font-size: 15px; font-weight: 600; }
+  .content { flex: 1; overflow-y: auto; padding: 20px 22px; }
+
+  /* Buttons */
+  .btn { padding: 7px 14px; border-radius: var(--radius); font-size: 13px; cursor: pointer; border: 0.5px solid var(--border2); background: var(--bg); color: var(--txt); transition: background .15s; font-family: var(--font); white-space: nowrap; }
+  .btn:hover { background: var(--bg2); }
+  .btn-dark { background: var(--txt); color: var(--bg); border-color: var(--txt); }
+  .btn-dark:hover { opacity: .82; }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .btn-xs { padding: 3px 8px; font-size: 11px; }
+  .icon-btn { display: inline-flex; align-items: center; gap: 6px; }
+
+  /* Metrics */
+  .metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+  .metric { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; }
+  .metric label { font-size: 11px; color: var(--txt2); display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
+  .metric .val { font-size: 22px; font-weight: 600; }
+  .metric .sub { font-size: 11px; color: var(--txt3); margin-top: 4px; }
+
+  /* Table */
+  .tcard { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 9px 12px; font-size: 11px; font-weight: 600; color: var(--txt2); border-bottom: 0.5px solid var(--border); background: var(--bg2); text-transform: uppercase; letter-spacing: .04em; }
+  td { padding: 10px 12px; border-bottom: 0.5px solid var(--border); }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr.drow:hover td { background: var(--bg2); cursor: pointer; }
+  tbody tr.sel td { background: #eef5ff !important; }
+
+  /* Toolbar */
+  .toolbar { display: flex; gap: 8px; margin-bottom: 14px; align-items: center; flex-wrap: wrap; }
+  .toolbar input, .toolbar select { padding: 7px 11px; font-size: 13px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg); color: var(--txt); font-family: var(--font); }
+  .toolbar input { flex: 1; min-width: 160px; }
+
+  /* Export bar */
+  .expbar { display: none; align-items: center; gap: 8px; padding: 10px 14px; background: var(--bg-info); border: 0.5px solid #b5d4f4; border-radius: var(--radius); margin-bottom: 12px; flex-wrap: wrap; }
+  .expbar.show { display: flex; }
+  .expbar .sel-lbl { font-size: 13px; font-weight: 600; color: var(--txt-info); flex: 1; }
+  .exbtn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 13px; border-radius: var(--radius); font-size: 12px; font-weight: 600; cursor: pointer; border: none; font-family: var(--font); transition: opacity .15s; }
+  .exbtn:hover { opacity: .82; }
+  .exbtn:disabled { opacity: .45; cursor: default; }
+  .exbtn.pdf { background: #e24b4a; color: #fff; }
+  .exbtn.xlsx { background: #1d9e75; color: #fff; }
+  .exbtn.docx { background: #185fa5; color: #fff; }
+  .exbtn.csv { background: #5f5e5a; color: #fff; }
+
+  /* Badges */
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .b-green { background: #eaf3de; color: #3b6d11; }
+  .b-blue { background: #e6f1fb; color: #185fa5; }
+  .b-gray { background: #f1efe8; color: #5f5e5a; }
+  .b-red { background: #fcebeb; color: #a32d2d; }
+
+  /* Modal */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.38); display: none; align-items: center; justify-content: center; z-index: 100; }
+  .overlay.open { display: flex; }
+  .modal { background: var(--bg); border-radius: var(--radius-lg); border: 0.5px solid var(--border2); padding: 22px; width: 480px; max-height: 88vh; overflow-y: auto; }
+  .modal.wide { width: 540px; }
+  .modal h3 { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+  .frow { margin-bottom: 11px; }
+  .frow label { font-size: 11px; color: var(--txt2); display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .04em; }
+  .frow input, .frow select, .frow textarea { width: 100%; padding: 7px 10px; font-size: 13px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg); color: var(--txt); font-family: var(--font); }
+  .fgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .mactions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; padding-top: 14px; border-top: 0.5px solid var(--border); }
+
+  /* Items table inside modal */
+  .itable { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 8px; }
+  .itable th { padding: 6px 8px; background: var(--bg2); text-align: left; font-weight: 600; font-size: 11px; color: var(--txt2); }
+  .itable td { padding: 5px 6px; border-top: 0.5px solid var(--border); }
+  .itable input, .itable select { padding: 4px 6px; font-size: 12px; width: 100%; border-radius: 4px; border: 0.5px solid var(--border2); background: var(--bg); color: var(--txt); font-family: var(--font); }
+  .totrow { display: flex; justify-content: flex-end; gap: 18px; font-size: 12px; padding: 8px 0 2px; border-top: 0.5px solid var(--border); margin-top: 4px; }
+
+  /* Factura detail */
+  .fdet { background: var(--bg); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 22px; width: 520px; max-height: 88vh; overflow-y: auto; }
+  .fdet-head { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 14px; border-bottom: 0.5px solid var(--border); margin-bottom: 16px; }
+  .fdet-num { font-size: 19px; font-weight: 700; }
+  .fdet-sub { font-size: 12px; color: var(--txt2); margin-top: 3px; }
+  .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .party-lbl { font-size: 10px; color: var(--txt3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+  .party-name { font-size: 13px; font-weight: 600; }
+  .party-sub { font-size: 12px; color: var(--txt2); }
+  .tline { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; color: var(--txt2); }
+  .tline.grand { font-size: 16px; font-weight: 700; color: var(--txt); padding-top: 9px; border-top: 0.5px solid var(--border); margin-top: 4px; }
+  .dl-section { margin-top: 16px; padding-top: 14px; border-top: 0.5px solid var(--border); }
+  .dl-section p { font-size: 12px; color: var(--txt2); margin-bottom: 9px; font-weight: 500; }
+  .dl-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 20px; right: 20px; background: var(--txt); color: var(--bg); padding: 10px 16px; border-radius: var(--radius); font-size: 13px; z-index: 999; opacity: 0; transform: translateY(8px); transition: all .28s; pointer-events: none; max-width: 300px; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* Spinner */
+  .spin { display: inline-block; width: 13px; height: 13px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; animation: sp .6s linear infinite; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+
+  /* Checkbox */
+  input[type=checkbox] { width: 15px; height: 15px; cursor: pointer; accent-color: #185fa5; }
+
+  /* Section title */
+  .sec-title { font-size: 13px; font-weight: 600; color: var(--txt2); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; }
+
+  /* Status change buttons */
+  .state-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
+  .state-btns span { font-size: 12px; color: var(--txt2); margin-right: 2px; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h1>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        FacturApp
+      </h1>
+      <p>Mi empresa SRL</p>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" onclick="goTo('dashboard',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" onclick="goTo('clientes',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Clientes
+      </div>
+      <div class="nav-item" onclick="goTo('productos',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        Productos
+      </div>
+      <div class="nav-item" onclick="goTo('facturas',this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Facturas
+      </div>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="ava">AD</div>
+      <span>Admin</span>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <div class="main">
+    <div class="topbar">
+      <h2 id="page-title">Dashboard</h2>
+    </div>
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div id="page-dashboard">
+        <div class="metrics">
+          <div class="metric"><label>Total facturado</label><div class="val" id="m-total">$0</div><div class="sub">acumulado</div></div>
+          <div class="metric"><label>Emitidas</label><div class="val" id="m-emit">0</div><div class="sub">sin contar anuladas</div></div>
+          <div class="metric"><label>Cobradas</label><div class="val" id="m-pag">0</div><div class="sub" style="color:#3b6d11">al día</div></div>
+          <div class="metric"><label>Pendientes</label><div class="val" id="m-pend">0</div><div class="sub" style="color:#854f0b">por cobrar</div></div>
+        </div>
+        <div class="sec-title">Últimas facturas</div>
+        <div class="tcard"><table id="dash-tbl"></table></div>
+      </div>
+
+      <!-- CLIENTES -->
+      <div id="page-clientes" style="display:none">
+        <div class="toolbar">
+          <input type="text" placeholder="Buscar cliente..." oninput="filterTbl('tbl-clientes',this.value)">
+          <button class="btn btn-dark icon-btn" onclick="openModal('ov-cliente')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nuevo cliente
+          </button>
+        </div>
+        <div class="tcard"><table id="tbl-clientes"></table></div>
+      </div>
+
+      <!-- PRODUCTOS -->
+      <div id="page-productos" style="display:none">
+        <div class="toolbar">
+          <input type="text" placeholder="Buscar producto..." oninput="filterTbl('tbl-productos',this.value)">
+          <button class="btn btn-dark icon-btn" onclick="openModal('ov-producto')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nuevo producto
+          </button>
+        </div>
+        <div class="tcard"><table id="tbl-productos"></table></div>
+      </div>
+
+      <!-- FACTURAS -->
+      <div id="page-facturas" style="display:none">
+        <div class="toolbar">
+          <input type="text" id="search-f" placeholder="Buscar número o cliente..." oninput="renderFacturas()">
+          <select id="flt-estado" onchange="renderFacturas()" style="padding:7px 11px;font-size:13px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--txt)">
+            <option value="">Todos los estados</option>
+            <option value="BORRADOR">Borrador</option>
+            <option value="EMITIDA">Emitida</option>
+            <option value="PAGADA">Pagada</option>
+            <option value="ANULADA">Anulada</option>
+          </select>
+          <button class="btn btn-dark icon-btn" onclick="openModal('ov-factura')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nueva factura
+          </button>
+        </div>
+        <!-- Export bar -->
+        <div class="expbar" id="expbar">
+          <span class="sel-lbl" id="sel-lbl">0 seleccionadas</span>
+          <button class="exbtn pdf" id="ebtn-pdf" onclick="exportSelected('pdf')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            PDF
+          </button>
+          <button class="exbtn xlsx" id="ebtn-xlsx" onclick="exportSelected('xlsx')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+            XLSX
+          </button>
+          <button class="exbtn docx" id="ebtn-docx" onclick="exportSelected('docx')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            DOCX
+          </button>
+          <button class="exbtn csv" id="ebtn-csv" onclick="exportSelected('csv')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            CSV
+          </button>
+          <button class="btn btn-sm" onclick="clearSel()">Limpiar</button>
+        </div>
+        <div class="tcard"><table id="tbl-facturas"></table></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Nuevo cliente -->
+<div class="overlay" id="ov-cliente">
+  <div class="modal">
+    <h3>Nuevo cliente</h3>
+    <div class="fgrid">
+      <div class="frow"><label>Nombre *</label><input id="c-nom" type="text" placeholder="Razón social o nombre"></div>
+      <div class="frow"><label>Email</label><input id="c-email" type="email" placeholder="correo@empresa.com"></div>
+      <div class="frow"><label>Teléfono</label><input id="c-tel" type="text" placeholder="+54 9 351..."></div>
+      <div class="frow"><label>CUIT / DNI</label><input id="c-cuit" type="text" placeholder="30-12345678-9"></div>
+    </div>
+    <div class="frow"><label>Dirección</label><input id="c-dir" type="text" placeholder="Calle, número, ciudad"></div>
+    <div class="mactions">
+      <button class="btn" onclick="closeModal('ov-cliente')">Cancelar</button>
+      <button class="btn btn-dark" onclick="saveCliente()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Nuevo producto -->
+<div class="overlay" id="ov-producto">
+  <div class="modal">
+    <h3>Nuevo producto / servicio</h3>
+    <div class="frow"><label>Nombre *</label><input id="p-nom" type="text" placeholder="Nombre del producto o servicio"></div>
+    <div class="frow"><label>Descripción</label><input id="p-desc" type="text" placeholder="Descripción breve"></div>
+    <div class="fgrid">
+      <div class="frow"><label>Precio (ARS) *</label><input id="p-precio" type="number" placeholder="0.00" min="0"></div>
+      <div class="frow"><label>Unidad</label><input id="p-unidad" type="text" placeholder="hora / unidad / mes"></div>
+    </div>
+    <div class="mactions">
+      <button class="btn" onclick="closeModal('ov-producto')">Cancelar</button>
+      <button class="btn btn-dark" onclick="saveProducto()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Nueva factura -->
+<div class="overlay" id="ov-factura">
+  <div class="modal wide">
+    <h3>Nueva factura</h3>
+    <div class="fgrid">
+      <div class="frow"><label>Cliente *</label><select id="f-cliente"></select></div>
+      <div class="frow"><label>Fecha *</label><input id="f-fecha" type="date"></div>
+      <div class="frow"><label>Vencimiento</label><input id="f-vence" type="date"></div>
+      <div class="frow"><label>IVA (%)</label><input id="f-iva" type="number" value="21" min="0" max="100"></div>
+    </div>
+    <div class="sec-title" style="margin-top:8px">Ítems</div>
+    <table class="itable">
+      <thead><tr><th>Descripción</th><th style="width:70px">Cant.</th><th style="width:95px">Precio unit.</th><th style="width:85px">Subtotal</th><th style="width:32px"></th></tr></thead>
+      <tbody id="items-body"></tbody>
+    </table>
+    <button style="background:none;border:none;font-size:12px;color:var(--txt2);cursor:pointer;padding:4px 0;font-family:var(--font)" onclick="addItem()">+ Agregar ítem</button>
+    <div class="totrow">
+      <span>Subtotal: <strong id="tot-sub">$0</strong></span>
+      <span>IVA: <strong id="tot-iva">$0</strong></span>
+      <span>Total: <strong id="tot-tot">$0</strong></span>
+    </div>
+    <div class="frow" style="margin-top:10px"><label>Notas</label><input id="f-notas" type="text" placeholder="Condiciones, observaciones..."></div>
+    <div class="mactions">
+      <button class="btn" onclick="closeModal('ov-factura')">Cancelar</button>
+      <button class="btn btn-dark" onclick="saveFactura()">Crear factura</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Detalle factura -->
+<div class="overlay" id="ov-detalle">
+  <div class="fdet" id="det-content"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ─── DATA ─── */
+let clientes = [
+  {id:1,nombre:'Tecnología Sur SA',email:'contacto@tecnologiasur.com',telefono:'351-555-0101',cuit:'30-71234567-8',direccion:'Av. Colón 1234, Córdoba',activo:true},
+  {id:2,nombre:'Freelancer Digital',email:'hola@freelancer.com',telefono:'351-555-0202',cuit:'20-35678901-2',direccion:'Mendoza 456, Córdoba',activo:true},
+  {id:3,nombre:'Comercio El Norte',email:'administracion@elnorte.com',telefono:'351-555-0303',cuit:'30-45678901-3',direccion:'Belgrano 789, Villa Carlos Paz',activo:true},
+];
+let productos = [
+  {id:1,nombre:'Desarrollo Web',descripcion:'Diseño y desarrollo de sitios',precio:15000,unidad:'hora',activo:true},
+  {id:2,nombre:'Consultoría IT',descripcion:'Asesoramiento en sistemas',precio:12000,unidad:'hora',activo:true},
+  {id:3,nombre:'Mantenimiento mensual',descripcion:'Soporte y mantenimiento',precio:45000,unidad:'mes',activo:true},
+  {id:4,nombre:'Capacitación',descripcion:'Cursos y talleres técnicos',precio:20000,unidad:'unidad',activo:true},
+];
+let facturas = [
+  {id:1,numero:'FAC-0001',clienteId:1,fecha:'2026-05-03',vence:'2026-05-20',estado:'PAGADA',subtotal:60000,iva:21,total:72600,notas:'',items:[{desc:'Desarrollo Web',cant:4,precio:15000,sub:60000}]},
+  {id:2,numero:'FAC-0002',clienteId:2,fecha:'2026-05-10',vence:'2026-05-30',estado:'EMITIDA',subtotal:45000,iva:21,total:54450,notas:'Pago a 30 días',items:[{desc:'Mantenimiento mensual',cant:1,precio:45000,sub:45000}]},
+  {id:3,numero:'FAC-0003',clienteId:3,fecha:'2026-05-15',vence:'2026-06-01',estado:'EMITIDA',subtotal:24000,iva:21,total:29040,notas:'',items:[{desc:'Consultoría IT',cant:2,precio:12000,sub:24000}]},
+  {id:4,numero:'FAC-0004',clienteId:1,fecha:'2026-05-18',vence:'2026-06-05',estado:'PAGADA',subtotal:20000,iva:21,total:24200,notas:'',items:[{desc:'Capacitación',cant:1,precio:20000,sub:20000}]},
+  {id:5,numero:'FAC-0005',clienteId:2,fecha:'2026-05-22',vence:'2026-06-10',estado:'BORRADOR',subtotal:30000,iva:0,total:30000,notas:'Presupuesto pendiente',items:[{desc:'Consultoría IT',cant:2.5,precio:12000,sub:30000}]},
+  {id:6,numero:'FAC-0006',clienteId:3,fecha:'2026-05-28',vence:'2026-06-15',estado:'ANULADA',subtotal:45000,iva:21,total:54450,notas:'Anulada por cliente',items:[{desc:'Mantenimiento mensual',cant:1,precio:45000,sub:45000}]},
+];
+const EMPRESA = {nombre:'Mi empresa SRL',cuit:'30-98765432-1',direccion:'Av. Siempre Viva 742, Córdoba',email:'admin@miempresa.com',telefono:'351-555-0000'};
+let nxC=4,nxP=5,nxF=7,nxN=7;
+let sel = new Set();
+
+/* ─── HELPERS ─── */
+const $=id=>document.getElementById(id);
+const fmt=n=>'$'+Number(n).toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:0});
+const ini=n=>n.trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+const estBadge={PAGADA:'b-green',EMITIDA:'b-blue',BORRADOR:'b-gray',ANULADA:'b-red'};
+const clNom=id=>{const c=clientes.find(x=>x.id===id);return c?c.nombre:'—';};
+const clObj=id=>clientes.find(x=>x.id===id)||{nombre:'—',cuit:'—',email:'—',direccion:'—'};
+
+function toast(msg){
+  const t=$('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+/* ─── NAV ─── */
+function goTo(page,el){
+  document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+  el.classList.add('active');
+  ['dashboard','clientes','productos','facturas'].forEach(p=>{
+    $(('page-'+p)).style.display=p===page?'':'none';
+  });
+  $('page-title').textContent=el.textContent.trim();
+  sel.clear();
+  if(page==='dashboard') renderDash();
+  if(page==='clientes') renderClientes();
+  if(page==='productos') renderProductos();
+  if(page==='facturas') renderFacturas();
+}
+
+/* ─── MODALS ─── */
+function openModal(id){
+  if(id==='ov-factura') setupFactModal();
+  $(id).classList.add('open');
+}
+function closeModal(id){$(id).classList.remove('open');}
+
+/* ─── DASHBOARD ─── */
+function renderDash(){
+  const tot=facturas.filter(f=>f.estado==='PAGADA').reduce((a,f)=>a+f.total,0);
+  const emit=facturas.filter(f=>f.estado!=='BORRADOR'&&f.estado!=='ANULADA').length;
+  const pag=facturas.filter(f=>f.estado==='PAGADA').length;
+  const pend=facturas.filter(f=>f.estado==='EMITIDA').length;
+  $('m-total').textContent=fmt(tot);
+  $('m-emit').textContent=emit;
+  $('m-pag').textContent=pag;
+  $('m-pend').textContent=pend;
+  const rows=[...facturas].reverse().slice(0,5).map(f=>`
+    <tr class="drow" onclick="verFactura(${f.id})">
+      <td><strong>${f.numero}</strong></td>
+      <td><span class="ava" style="width:26px;height:26px;font-size:10px;margin-right:7px">${ini(clNom(f.clienteId))}</span>${clNom(f.clienteId)}</td>
+      <td style="color:var(--txt2)">${f.fecha}</td>
+      <td><strong>${fmt(f.total)}</strong></td>
+      <td><span class="badge ${estBadge[f.estado]}">${f.estado}</span></td>
+    </tr>`).join('');
+  $('dash-tbl').innerHTML=`<thead><tr><th>Número</th><th>Cliente</th><th>Fecha</th><th>Total</th><th>Estado</th></tr></thead><tbody>${rows}</tbody>`;
+}
+
+/* ─── CLIENTES ─── */
+function renderClientes(){
+  const rows=clientes.map(c=>`
+    <tr>
+      <td><span class="ava" style="width:26px;height:26px;font-size:10px;margin-right:7px">${ini(c.nombre)}</span><strong>${c.nombre}</strong></td>
+      <td style="color:var(--txt2)">${c.email||'—'}</td>
+      <td style="color:var(--txt2)">${c.telefono||'—'}</td>
+      <td style="color:var(--txt2)">${c.cuit||'—'}</td>
+      <td><span class="badge ${c.activo?'b-green':'b-gray'}">${c.activo?'Activo':'Inactivo'}</span></td>
+    </tr>`).join('');
+  $('tbl-clientes').innerHTML=`<thead><tr><th>Nombre</th><th>Email</th><th>Teléfono</th><th>CUIT/DNI</th><th>Estado</th></tr></thead><tbody>${rows}</tbody>`;
+}
+function saveCliente(){
+  const n=$('c-nom').value.trim();if(!n){toast('El nombre es obligatorio');return;}
+  clientes.push({id:nxC++,nombre:n,email:$('c-email').value,telefono:$('c-tel').value,cuit:$('c-cuit').value,direccion:$('c-dir').value,activo:true});
+  closeModal('ov-cliente');renderClientes();toast('Cliente guardado ✓');
+  ['c-nom','c-email','c-tel','c-cuit','c-dir'].forEach(i=>$(i).value='');
+}
+
+/* ─── PRODUCTOS ─── */
+function renderProductos(){
+  const rows=productos.map(p=>`
+    <tr>
+      <td><strong>${p.nombre}</strong></td>
+      <td style="color:var(--txt2)">${p.descripcion||'—'}</td>
+      <td><strong>${fmt(p.precio)}</strong></td>
+      <td style="color:var(--txt2)">${p.unidad||'—'}</td>
+      <td><span class="badge ${p.activo?'b-green':'b-gray'}">${p.activo?'Activo':'Inactivo'}</span></td>
+    </tr>`).join('');
+  $('tbl-productos').innerHTML=`<thead><tr><th>Nombre</th><th>Descripción</th><th>Precio</th><th>Unidad</th><th>Estado</th></tr></thead><tbody>${rows}</tbody>`;
+}
+function saveProducto(){
+  const n=$('p-nom').value.trim();const pr=parseFloat($('p-precio').value);
+  if(!n||isNaN(pr)){toast('Nombre y precio son obligatorios');return;}
+  productos.push({id:nxP++,nombre:n,descripcion:$('p-desc').value,precio:pr,unidad:$('p-unidad').value,activo:true});
+  closeModal('ov-producto');renderProductos();toast('Producto guardado ✓');
+  ['p-nom','p-desc','p-precio','p-unidad'].forEach(i=>$(i).value='');
+}
+
+/* ─── FACTURAS ─── */
+function getFiltered(){
+  const q=($('search-f')||{value:''}).value.toLowerCase();
+  const est=($('flt-estado')||{value:''}).value;
+  return facturas.filter(f=>{
+    const mn=f.numero.toLowerCase().includes(q)||clNom(f.clienteId).toLowerCase().includes(q);
+    return(!q||mn)&&(!est||f.estado===est);
+  });
+}
+function renderFacturas(){
+  const list=getFiltered();
+  const allChk=list.length>0&&list.every(f=>sel.has(f.id));
+  const rows=list.map(f=>`
+    <tr class="drow ${sel.has(f.id)?'sel':''}">
+      <td onclick="event.stopPropagation()"><input type="checkbox" ${sel.has(f.id)?'checked':''} onchange="toggleOne(${f.id},this)" aria-label="Seleccionar ${f.numero}"></td>
+      <td onclick="verFactura(${f.id})"><strong>${f.numero}</strong></td>
+      <td onclick="verFactura(${f.id})"><span class="ava" style="width:26px;height:26px;font-size:10px;margin-right:7px">${ini(clNom(f.clienteId))}</span>${clNom(f.clienteId)}</td>
+      <td onclick="verFactura(${f.id})" style="color:var(--txt2)">${f.fecha}</td>
+      <td onclick="verFactura(${f.id})" style="color:var(--txt2)">${f.vence||'—'}</td>
+      <td onclick="verFactura(${f.id})"><strong>${fmt(f.total)}</strong></td>
+      <td onclick="verFactura(${f.id})"><span class="badge ${estBadge[f.estado]}">${f.estado}</span></td>
+    </tr>`).join('');
+  $('tbl-facturas').innerHTML=`
+    <thead><tr>
+      <th style="width:36px"><input type="checkbox" id="chk-all" ${allChk?'checked':''} onchange="toggleAll(this)" aria-label="Seleccionar todas"></th>
+      <th>Número</th><th>Cliente</th><th>Fecha</th><th>Vencimiento</th><th>Total</th><th>Estado</th>
+    </tr></thead><tbody>${rows}</tbody>`;
+  updateExpBar();
+}
+function toggleAll(chk){getFiltered().forEach(f=>chk.checked?sel.add(f.id):sel.delete(f.id));renderFacturas();}
+function toggleOne(id,chk){chk.checked?sel.add(id):sel.delete(id);updateExpBar();renderFacturas();}
+function clearSel(){sel.clear();renderFacturas();}
+function updateExpBar(){
+  const n=sel.size;
+  const bar=$('expbar');
+  if(n>0){bar.classList.add('show');$('sel-lbl').textContent=n===1?'1 factura seleccionada':`${n} facturas seleccionadas`;}
+  else bar.classList.remove('show');
+}
+function filterTbl(tid,q){
+  document.querySelectorAll(`#${tid} tbody tr`).forEach(tr=>{
+    tr.style.display=tr.textContent.toLowerCase().includes(q.toLowerCase())?'':'none';
+  });
+}
+
+/* ─── NUEVA FACTURA ─── */
+function setupFactModal(){
+  $('f-cliente').innerHTML=clientes.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  $('f-fecha').value=new Date().toISOString().split('T')[0];
+  $('items-body').innerHTML='';addItem();addItem();calcTots();
+  if(!document.getElementById('dl-prod')){
+    const dl=document.createElement('datalist');dl.id='dl-prod';
+    productos.forEach(p=>{const o=document.createElement('option');o.value=p.nombre;dl.appendChild(o);});
+    document.body.appendChild(dl);
+  }
+}
+function addItem(){
+  const tr=document.createElement('tr');
+  tr.innerHTML=`
+    <td><input type="text" placeholder="Descripción" oninput="calcTots()" list="dl-prod"></td>
+    <td><input type="number" value="1" min="0.01" step="0.01" oninput="calcTots()" style="width:60px"></td>
+    <td><input type="number" value="0" min="0" oninput="calcTots()" style="width:80px"></td>
+    <td style="font-size:12px;font-weight:600">$0</td>
+    <td><button onclick="this.closest('tr').remove();calcTots()" style="background:none;border:none;cursor:pointer;color:var(--txt3);font-size:16px;line-height:1">×</button></td>`;
+  $('items-body').appendChild(tr);
+}
+function calcTots(){
+  let sub=0;
+  document.querySelectorAll('#items-body tr').forEach(tr=>{
+    const inp=tr.querySelectorAll('input');
+    const s=(parseFloat(inp[1].value)||0)*(parseFloat(inp[2].value)||0);
+    tr.querySelectorAll('td')[3].textContent=fmt(s);sub+=s;
+  });
+  const iva=parseFloat($('f-iva').value)||0;
+  $('tot-sub').textContent=fmt(sub);
+  $('tot-iva').textContent=fmt(sub*iva/100);
+  $('tot-tot').textContent=fmt(sub+sub*iva/100);
+}
+function saveFactura(){
+  const cid=parseInt($('f-cliente').value);
+  const fecha=$('f-fecha').value;if(!fecha){toast('La fecha es obligatoria');return;}
+  const items=[];
+  document.querySelectorAll('#items-body tr').forEach(tr=>{
+    const inp=tr.querySelectorAll('input');
+    const desc=inp[0].value.trim(),cant=parseFloat(inp[1].value)||0,precio=parseFloat(inp[2].value)||0;
+    if(desc&&cant>0)items.push({desc,cant,precio,sub:cant*precio});
+  });
+  if(!items.length){toast('Agregá al menos un ítem');return;}
+  const iva=parseFloat($('f-iva').value)||0;
+  const sub=items.reduce((a,i)=>a+i.sub,0);
+  const num=`FAC-${String(nxN++).padStart(4,'0')}`;
+  facturas.push({id:nxF++,numero:num,clienteId:cid,fecha,vence:$('f-vence').value,estado:'BORRADOR',subtotal:sub,iva,total:sub+sub*iva/100,notas:$('f-notas').value,items});
+  closeModal('ov-factura');renderFacturas();toast(`Factura ${num} creada ✓`);
+}
+
+/* ─── DETALLE FACTURA ─── */
+function verFactura(id){
+  const f=facturas.find(x=>x.id===id);if(!f)return;
+  const cl=clObj(f.clienteId);
+  const ivaAmt=f.subtotal*f.iva/100;
+  const estados=['BORRADOR','EMITIDA','PAGADA','ANULADA'];
+  $('det-content').innerHTML=`
+    <div class="fdet-head">
+      <div>
+        <div class="fdet-num">${f.numero}</div>
+        <div class="fdet-sub">Fecha: ${f.fecha}${f.vence?' &nbsp;·&nbsp; Vence: '+f.vence:''}</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="badge ${estBadge[f.estado]}">${f.estado}</span>
+        <button class="btn btn-sm" onclick="closeModal('ov-detalle')">✕</button>
+      </div>
+    </div>
+    <div class="parties">
+      <div>
+        <div class="party-lbl">Emisor</div>
+        <div class="party-name">${EMPRESA.nombre}</div>
+        <div class="party-sub">CUIT: ${EMPRESA.cuit}</div>
+        <div class="party-sub">${EMPRESA.direccion}</div>
+      </div>
+      <div>
+        <div class="party-lbl">Cliente</div>
+        <div class="party-name">${cl.nombre}</div>
+        <div class="party-sub">CUIT: ${cl.cuit||'—'}</div>
+        <div class="party-sub">${cl.direccion||'—'}</div>
+      </div>
+    </div>
+    <table class="itable" style="margin-bottom:0">
+      <thead><tr><th>Descripción</th><th style="text-align:right;width:55px">Cant.</th><th style="text-align:right;width:90px">Precio unit.</th><th style="text-align:right;width:90px">Subtotal</th></tr></thead>
+      <tbody>${f.items.map(i=>`<tr><td>${i.desc}</td><td style="text-align:right">${i.cant}</td><td style="text-align:right">${fmt(i.precio)}</td><td style="text-align:right">${fmt(i.sub)}</td></tr>`).join('')}</tbody>
+    </table>
+    <div style="margin-top:10px">
+      <div class="tline"><span>Subtotal</span><span>${fmt(f.subtotal)}</span></div>
+      <div class="tline"><span>IVA (${f.iva}%)</span><span>${fmt(ivaAmt)}</span></div>
+      <div class="tline grand"><span>Total</span><span>${fmt(f.total)}</span></div>
+    </div>
+    ${f.notas?`<div style="margin-top:10px;padding:9px 12px;background:var(--bg2);border-radius:var(--radius);font-size:12px;color:var(--txt2)">📝 ${f.notas}</div>`:''}
+    <div class="dl-section">
+      <p>⬇ Descargar esta factura</p>
+      <div class="dl-btns">
+        <button class="exbtn pdf" id="dl-pdf-${f.id}" onclick="exportOne(${f.id},'pdf',this)">PDF</button>
+        <button class="exbtn xlsx" id="dl-xlsx-${f.id}" onclick="exportOne(${f.id},'xlsx',this)">XLSX</button>
+        <button class="exbtn docx" id="dl-docx-${f.id}" onclick="exportOne(${f.id},'docx',this)">DOCX</button>
+        <button class="exbtn csv" id="dl-csv-${f.id}" onclick="exportOne(${f.id},'csv',this)">CSV</button>
+      </div>
+    </div>
+    <div class="state-btns">
+      <span>Cambiar estado:</span>
+      ${estados.filter(e=>e!==f.estado).map(e=>`<button class="btn btn-xs" onclick="cambiarEstado(${f.id},'${e}')">${e}</button>`).join('')}
+    </div>`;
+  openModal('ov-detalle');
+}
+function cambiarEstado(id,estado){
+  const f=facturas.find(x=>x.id===id);if(f){f.estado=estado;closeModal('ov-detalle');renderFacturas();renderDash();toast(`Estado → ${estado}`);}
+}
+
+/* ══════════════════════════════════════
+   EXPORTACIÓN
+══════════════════════════════════════ */
+
+function setLoading(btn, loading){
+  if(!btn) return;
+  if(loading){btn.disabled=true;btn._orig=btn.innerHTML;btn.innerHTML='<span class="spin"></span>';}
+  else{btn.disabled=false;btn.innerHTML=btn._orig||btn.innerHTML;}
+}
+
+/* Obtiene IDs según contexto */
+function getIds(ids){ return Array.isArray(ids)?ids:[...sel]; }
+
+/* ── PDF ── */
+async function makePDF(ids){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  ids.forEach((id,idx)=>{
+    const f=facturas.find(x=>x.id===id);if(!f)return;
+    const cl=clObj(f.clienteId);
+    const ivaAmt=f.subtotal*f.iva/100;
+    if(idx>0) doc.addPage();
+
+    // Header strip
+    doc.setFillColor(26,26,24);
+    doc.rect(0,0,210,22,'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(14);doc.setFont('helvetica','bold');
+    doc.text(EMPRESA.nombre,14,14);
+    doc.setFontSize(9);doc.setFont('helvetica','normal');
+    doc.text(f.numero,196,14,{align:'right'});
+
+    // Empresa info
+    doc.setTextColor(100,100,100);doc.setFontSize(8);
+    doc.text(`CUIT: ${EMPRESA.cuit}  |  ${EMPRESA.email}  |  ${EMPRESA.telefono}`,14,30);
+    doc.text(EMPRESA.direccion,14,36);
+
+    // Badge estado
+    const bColors={PAGADA:[59,109,17],EMITIDA:[24,95,165],BORRADOR:[95,94,90],ANULADA:[163,45,45]};
+    const bc=bColors[f.estado]||[100,100,100];
+    doc.setFillColor(...bc);
+    doc.roundedRect(148,25,48,10,2,2,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(8);doc.setFont('helvetica','bold');
+    doc.text(f.estado,172,31.5,{align:'center'});
+
+    // Divider
+    doc.setDrawColor(220,220,215);doc.setLineWidth(0.3);
+    doc.line(14,42,196,42);
+
+    // Fecha / vencimiento
+    doc.setTextColor(100,100,100);doc.setFontSize(8);doc.setFont('helvetica','normal');
+    doc.text(`Fecha de emisión: ${f.fecha}`,14,50);
+    if(f.vence) doc.text(`Fecha de vencimiento: ${f.vence}`,14,56);
+
+    // Parties boxes
+    doc.setFillColor(247,247,245);
+    doc.roundedRect(14,62,85,32,2,2,'F');
+    doc.roundedRect(111,62,85,32,2,2,'F');
+    doc.setTextColor(130,130,125);doc.setFontSize(7);doc.setFont('helvetica','bold');
+    doc.text('EMISOR',18,70);doc.text('CLIENTE',115,70);
+    doc.setTextColor(26,26,24);doc.setFontSize(9);doc.setFont('helvetica','bold');
+    doc.text(EMPRESA.nombre,18,77);doc.text(cl.nombre,115,77);
+    doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(80,80,80);
+    doc.text(`CUIT: ${EMPRESA.cuit}`,18,83);doc.text(`CUIT: ${cl.cuit||'—'}`,115,83);
+    doc.text(EMPRESA.direccion.substring(0,38),18,89);
+    doc.text((cl.direccion||'—').substring(0,38),115,89);
+
+    // Items table
+    doc.autoTable({
+      startY:100,
+      head:[['Descripción','Cant.','Precio unit.','Subtotal']],
+      body:f.items.map(i=>[i.desc,i.cant,fmt(i.precio),fmt(i.sub)]),
+      headStyles:{fillColor:[26,26,24],textColor:[255,255,255],fontSize:8,fontStyle:'bold'},
+      bodyStyles:{fontSize:8,textColor:[40,40,38]},
+      alternateRowStyles:{fillColor:[247,247,245]},
+      columnStyles:{0:{cellWidth:'auto'},1:{cellWidth:20,halign:'right'},2:{cellWidth:35,halign:'right'},3:{cellWidth:35,halign:'right'}},
+      margin:{left:14,right:14},
+      tableLineColor:[220,220,215],tableLineWidth:0.3,
+    });
+
+    // Totals
+    const ty=doc.lastAutoTable.finalY+8;
+    doc.setDrawColor(220,220,215);doc.line(120,ty,196,ty);
+    doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(100,100,100);
+    doc.text('Subtotal:',140,ty+7);doc.text(fmt(f.subtotal),196,ty+7,{align:'right'});
+    doc.text(`IVA (${f.iva}%):`,140,ty+14);doc.text(fmt(ivaAmt),196,ty+14,{align:'right'});
+    doc.setDrawColor(26,26,24);doc.line(120,ty+17,196,ty+17);
+    doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(26,26,24);
+    doc.text('TOTAL:',140,ty+25);doc.text(fmt(f.total),196,ty+25,{align:'right'});
+
+    if(f.notas){
+      doc.setFillColor(247,247,245);
+      doc.roundedRect(14,ty+30,182,12,2,2,'F');
+      doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(100,100,100);
+      doc.text(`Notas: ${f.notas}`,18,ty+38);
+    }
+
+    // Footer
+    doc.setFontSize(7);doc.setTextColor(150,150,145);
+    doc.text(`Documento generado el ${new Date().toLocaleDateString('es-AR')}`,14,285);
+    doc.text('Página '+(idx+1)+' de '+ids.length,196,285,{align:'right'});
+  });
+  const name=ids.length===1?`${facturas.find(x=>x.id===ids[0])?.numero||'factura'}.pdf`:`facturas_${ids.length}.pdf`;
+  doc.save(name);
+}
+
+/* ── XLSX ── */
+async function makeXLSX(ids){
+  const wb=XLSX.utils.book_new();
+  ids.forEach(id=>{
+    const f=facturas.find(x=>x.id===id);if(!f)return;
+    const cl=clObj(f.clienteId);
+    const ivaAmt=f.subtotal*f.iva/100;
+    const rows=[
+      ['FACTURA',''],
+      ['Empresa emisora:', EMPRESA.nombre],
+      ['CUIT emisor:', EMPRESA.cuit],
+      ['Dirección emisor:', EMPRESA.direccion],
+      [''],
+      ['Número:', f.numero],
+      ['Fecha:', f.fecha],
+      ['Vencimiento:', f.vence||'—'],
+      ['Estado:', f.estado],
+      [''],
+      ['Cliente:', cl.nombre],
+      ['CUIT cliente:', cl.cuit||'—'],
+      ['Dirección cliente:', cl.direccion||'—'],
+      [''],
+      ['DETALLE DE ÍTEMS','','',''],
+      ['Descripción','Cantidad','Precio unitario','Subtotal'],
+      ...f.items.map(i=>[i.desc,i.cant,i.precio,i.sub]),
+      [''],
+      ['','','Subtotal:', f.subtotal],
+      ['','',`IVA (${f.iva}%):`, ivaAmt],
+      ['','','TOTAL:', f.total],
+    ];
+    if(f.notas) rows.push([''],['Notas:', f.notas]);
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[{wch:30},{wch:12},{wch:20},{wch:16}];
+    XLSX.utils.book_append_sheet(wb,ws,f.numero.replace(/[^a-zA-Z0-9\-]/g,''));
+  });
+  const name=ids.length===1?`${facturas.find(x=>x.id===ids[0])?.numero||'factura'}.xlsx`:`facturas_${ids.length}.xlsx`;
+  XLSX.writeFile(wb,name);
+}
+
+/* ── DOCX ── */
+async function makeDOCX(ids){
+  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, BorderStyle, AlignmentType, HeadingLevel } = docx;
+
+  const docs=[];
+  for(let idx=0;idx<ids.length;idx++){
+    const f=facturas.find(x=>x.id===ids[idx]);if(!f)continue;
+    const cl=clObj(f.clienteId);
+    const ivaAmt=f.subtotal*f.iva/100;
+
+    const cellOpts=(text,bold=false,align=AlignmentType.LEFT)=>new TableCell({
+      children:[new Paragraph({alignment:align,children:[new TextRun({text:String(text),bold,size:20,font:'Calibri'})],})],
+      borders:{top:{style:BorderStyle.SINGLE,size:1,color:'E0E0DC'},bottom:{style:BorderStyle.SINGLE,size:1,color:'E0E0DC'},left:{style:BorderStyle.SINGLE,size:1,color:'E0E0DC'},right:{style:BorderStyle.SINGLE,size:1,color:'E0E0DC'}},
+      margins:{top:80,bottom:80,left:100,right:100},
+    });
+
+    const headerRow=new TableRow({children:[
+      cellOpts('Descripción',true),cellOpts('Cant.',true,AlignmentType.RIGHT),
+      cellOpts('Precio unit.',true,AlignmentType.RIGHT),cellOpts('Subtotal',true,AlignmentType.RIGHT),
+    ],tableHeader:true});
+    const itemRows=f.items.map(i=>new TableRow({children:[
+      cellOpts(i.desc),cellOpts(String(i.cant),false,AlignmentType.RIGHT),
+      cellOpts(fmt(i.precio),false,AlignmentType.RIGHT),cellOpts(fmt(i.sub),false,AlignmentType.RIGHT),
+    ]}));
+
+    const doc=new Document({
+      styles:{paragraphStyles:[{id:'Normal',run:{font:'Calibri',size:22}}]},
+      sections:[{children:[
+        new Paragraph({heading:HeadingLevel.HEADING_1,children:[new TextRun({text:EMPRESA.nombre,bold:true,size:32,color:'1A1A12'})]}),
+        new Paragraph({children:[new TextRun({text:`CUIT: ${EMPRESA.cuit}  |  ${EMPRESA.email}  |  ${EMPRESA.telefono}`,size:18,color:'888880'})]}),
+        new Paragraph({children:[new TextRun({text:EMPRESA.direccion,size:18,color:'888880'})],spacing:{after:200}}),
+        new Paragraph({children:[new TextRun({text:`Factura: ${f.numero}  |  Estado: ${f.estado}`,bold:true,size:24})],spacing:{after:100}}),
+        new Paragraph({children:[new TextRun({text:`Fecha de emisión: ${f.fecha}${f.vence?'   Vencimiento: '+f.vence:''}`,size:20,color:'606060'})],spacing:{after:300}}),
+        new Paragraph({children:[new TextRun({text:'EMISOR',bold:true,size:18,color:'888880'})]}),
+        new Paragraph({children:[new TextRun({text:EMPRESA.nombre,bold:true,size:22})]}),
+        new Paragraph({children:[new TextRun({text:`CUIT: ${EMPRESA.cuit}`,size:20,color:'606060'})],spacing:{after:200}}),
+        new Paragraph({children:[new TextRun({text:'CLIENTE',bold:true,size:18,color:'888880'})]}),
+        new Paragraph({children:[new TextRun({text:cl.nombre,bold:true,size:22})]}),
+        new Paragraph({children:[new TextRun({text:`CUIT: ${cl.cuit||'—'}  |  ${cl.direccion||'—'}`,size:20,color:'606060'})],spacing:{after:300}}),
+        new Paragraph({children:[new TextRun({text:'DETALLE',bold:true,size:20})],spacing:{after:120}}),
+        new Table({width:{size:100,type:WidthType.PERCENTAGE},rows:[headerRow,...itemRows]}),
+        new Paragraph({spacing:{before:200}}),
+        new Paragraph({children:[new TextRun({text:`Subtotal: ${fmt(f.subtotal)}`,size:20,color:'606060'})],alignment:AlignmentType.RIGHT}),
+        new Paragraph({children:[new TextRun({text:`IVA (${f.iva}%): ${fmt(ivaAmt)}`,size:20,color:'606060'})],alignment:AlignmentType.RIGHT}),
+        new Paragraph({children:[new TextRun({text:`TOTAL: ${fmt(f.total)}`,bold:true,size:26})],alignment:AlignmentType.RIGHT,spacing:{before:100}}),
+        ...(f.notas?[new Paragraph({spacing:{before:300}}),new Paragraph({children:[new TextRun({text:`Notas: ${f.notas}`,size:18,color:'808080',italics:true})]})]:[]),
+      ]}],
+    });
+    docs.push({doc,num:f.numero});
+  }
+
+  for(const {doc,num} of docs){
+    const buf=await Packer.toBlob(doc);
+    saveAs(buf,`${num}.docx`);
+  }
+}
+
+/* ── CSV ── */
+async function makeCSV(ids){
+  const header=['Numero','Cliente','CUIT_Cliente','Fecha','Vencimiento','Estado','Descripcion_Item','Cantidad','Precio_Unitario','Subtotal_Item','Subtotal_Factura','IVA_Pct','IVA_Monto','Total','Notas'];
+  const rows=[header];
+  ids.forEach(id=>{
+    const f=facturas.find(x=>x.id===id);if(!f)return;
+    const cl=clObj(f.clienteId);
+    const ivaAmt=f.subtotal*f.iva/100;
+    f.items.forEach(i=>{
+      rows.push([f.numero,cl.nombre,cl.cuit||'',f.fecha,f.vence||'',f.estado,i.desc,i.cant,i.precio,i.sub,f.subtotal,f.iva,ivaAmt,f.total,f.notas||'']);
+    });
+  });
+  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  const name=ids.length===1?`${facturas.find(x=>x.id===ids[0])?.numero||'factura'}.csv`:`facturas_${ids.length}.csv`;
+  saveAs(blob,name);
+}
+
+/* ── Dispatch ── */
+async function exportOne(id,format,btn){
+  setLoading(btn,true);
+  try {
+    if(format==='pdf') await makePDF([id]);
+    else if(format==='xlsx') await makeXLSX([id]);
+    else if(format==='docx') await makeDOCX([id]);
+    else if(format==='csv') await makeCSV([id]);
+    toast(`Descarga ${format.toUpperCase()} iniciada ✓`);
+  } catch(e){
+    console.error(e);
+    toast(`Error al generar ${format.toUpperCase()}: ${e.message}`);
+  }
+  setLoading(btn,false);
+}
+
+async function exportSelected(format){
+  const ids=[...sel];
+  if(!ids.length){toast('Seleccioná al menos una factura');return;}
+  const btnMap={pdf:'ebtn-pdf',xlsx:'ebtn-xlsx',docx:'ebtn-docx',csv:'ebtn-csv'};
+  const btn=$(btnMap[format]);
+  setLoading(btn,true);
+  try {
+    if(format==='pdf') await makePDF(ids);
+    else if(format==='xlsx') await makeXLSX(ids);
+    else if(format==='docx') await makeDOCX(ids);
+    else if(format==='csv') await makeCSV(ids);
+    toast(`${ids.length} factura(s) exportadas como ${format.toUpperCase()} ✓`);
+  } catch(e){
+    console.error(e);
+    toast(`Error: ${e.message}`);
+  }
+  setLoading(btn,false);
+}
+
+/* ─── INIT ─── */
+renderDash();
+</script>
+</body>
+</html>
