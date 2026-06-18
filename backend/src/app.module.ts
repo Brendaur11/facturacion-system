@@ -4,6 +4,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { AppController } from './app.controller';
+import { SeederService } from './database/seeder.service';
+import { Empresa } from './modules/empresa/entities/empresa.entity';
+import { User } from './modules/users/entities/user.entity';
 import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ClientesModule } from './modules/clientes/clientes.module';
@@ -39,6 +42,7 @@ import { UsersModule } from './modules/users/users.module';
         logging: configService.get<string>('NODE_ENV') === 'development',
       }),
     }),
+    TypeOrmModule.forFeature([User, Empresa]),
     AdminModule,
     AuthModule,
     UsersModule,
@@ -51,6 +55,7 @@ import { UsersModule } from './modules/users/users.module';
   ],
   controllers: [AppController],
   providers: [
+    SeederService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
