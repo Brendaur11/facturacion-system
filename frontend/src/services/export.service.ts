@@ -11,9 +11,9 @@ export const exportService = {
     );
 
     const contentType: string =
-      res.headers['content-type'] ?? 'application/octet-stream';
+      String(res.headers['content-type'] ?? 'application/octet-stream');
 
-    const disposition: string = res.headers['content-disposition'] ?? '';
+    const disposition: string = String(res.headers['content-disposition'] ?? '');
     const filenameMatch = disposition.match(/filename="?([^"]+)"?/);
     const filename = filenameMatch?.[1] ?? `facturas.${contentType.includes('zip') ? 'zip' : format}`;
 
