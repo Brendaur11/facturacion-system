@@ -3,7 +3,6 @@ import { EstadoFactura, Factura } from '@/types';
 
 export interface CreateFacturaDto {
   clienteId: string;
-  empresaId: string;
   fecha: string;
   fechaVencimiento?: string;
   impuesto: number;
