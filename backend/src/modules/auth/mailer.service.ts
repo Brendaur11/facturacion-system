@@ -1,24 +1,20 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createTransport, Transporter } from 'nodemailer';
+import { Resend } from 'resend';
 
 @Injectable()
 export class MailerService {
-  private transporter: Transporter;
+  private readonly resend: Resend;
   private readonly logger = new Logger(MailerService.name);
+  private readonly from: string;
+
+  private readonly simulate: boolean;
 
   constructor(private readonly configService: ConfigService) {
-    this.transporter = createTransport({
-      host: configService.get<string>('MAIL_HOST', 'sandbox.smtp.mailtrap.io'),
-      port: parseInt(configService.get<string>('MAIL_PORT', '2525'), 10),
-      auth: {
-        user: configService.get<string>('MAIL_USER'),
-        pass: configService.get<string>('MAIL_PASS'),
-      },
-      connectionTimeout: 10_000,
-      greetingTimeout: 10_000,
-      socketTimeout: 15_000,
-    });
+    const apiKey = configService.get<string>('RESEND_API_KEY');
+    this.simulate = !apiKey;
+    this.resend = new Resend(apiKey ?? 'no-key');
+    this.from = configService.get<string>('MAIL_FROM', 'onboarding@resend.dev');
   }
 
   private escapeHtml(str: string): string {
@@ -30,15 +26,31 @@ export class MailerService {
       .replace(/'/g, '&#x27;');
   }
 
-  async sendInvoice(to: string, factura: { numero: string; empresa?: { nombre?: string; email?: string }; cliente?: { nombre?: string }; total?: number | string }, pdfBuffer: Buffer): Promise<void> {
+  async sendInvoice(
+    to: string,
+    factura: {
+      numero: string;
+      empresa?: { nombre?: string; email?: string };
+      cliente?: { nombre?: string };
+      total?: number | string;
+    },
+    pdfBuffer: Buffer,
+  ): Promise<void> {
     const safeName    = this.escapeHtml(factura.cliente?.nombre ?? 'Cliente');
     const safeNumero  = this.escapeHtml(factura.numero);
     const safeEmpresa = this.escapeHtml(factura.empresa?.nombre ?? 'Empresa');
-    const total = Number(factura.total ?? 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const fromEmail = factura.empresa?.email || this.configService.get('MAIL_FROM', 'noreply@facturacion.com');
+    const total = Number(factura.total ?? 0).toLocaleString('es-AR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
 
-    await this.transporter.sendMail({
-      from: `"${safeEmpresa}" <${fromEmail}>`,
+    if (this.simulate) {
+      this.logger.log(`[SIMULADO] Factura ${safeNumero} → ${to}`);
+      return;
+    }
+
+    const { error } = await this.resend.emails.send({
+      from: `${safeEmpresa} <${this.from}>`,
       to,
       subject: `Factura ${safeNumero} — ${safeEmpresa}`,
       html: `
@@ -61,10 +73,14 @@ export class MailerService {
         {
           filename: `${safeNumero}.pdf`,
           content: pdfBuffer,
-          contentType: 'application/pdf',
         },
       ],
     });
+
+    if (error) {
+      this.logger.error('Resend error al enviar factura', error);
+      throw new Error(error.message);
+    }
   }
 
   async sendPasswordReset(to: string, nombre: string, token: string): Promise<void> {
@@ -72,8 +88,13 @@ export class MailerService {
     const url = `${frontendUrl}/recuperar-contrasena/${token}`;
     const safeName = this.escapeHtml(nombre);
 
-    await this.transporter.sendMail({
-      from: `"Sistema de Facturación" <${this.configService.get('MAIL_FROM', 'noreply@facturacion.com')}>`,
+    if (this.simulate) {
+      this.logger.log(`[SIMULADO] Reset password → ${to}`);
+      return;
+    }
+
+    const { error } = await this.resend.emails.send({
+      from: `Sistema de Facturación <${this.from}>`,
       to,
       subject: 'Recuperar contraseña — Sistema de Facturación',
       html: `
@@ -99,5 +120,10 @@ export class MailerService {
         </html>
       `,
     });
+
+    if (error) {
+      this.logger.error('Resend error al enviar reset password', error);
+      throw new Error(error.message);
+    }
   }
 }
