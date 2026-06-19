@@ -113,12 +113,12 @@ export default function ClientesPage() {
     <AppLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Clientes</h1>
             <p className="text-sm text-gray-500 mt-0.5">{clientes.length} clientes registrados</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <input
               ref={fileInputRef}
               type="file"
@@ -147,8 +147,61 @@ export default function ClientesPage() {
           <Input placeholder="Buscar clientes..." className="pl-9 bg-white" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
 
-        {/* Table */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        {/* Mobile: cards */}
+        <div className="md:hidden space-y-3">
+          {loading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
+                <div className="h-5 bg-gray-100 rounded animate-pulse mb-3" />
+                <div className="h-4 bg-gray-100 rounded animate-pulse w-3/4" />
+              </div>
+            ))
+          ) : clientes.length === 0 ? (
+            <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+              <Users className="h-10 w-10 text-gray-200 mx-auto mb-3" />
+              <p className="text-sm font-medium text-gray-400">No se encontraron clientes</p>
+              {search && <p className="text-xs text-gray-400 mt-1">Probá con otro término de búsqueda</p>}
+            </div>
+          ) : clientes.map((c) => (
+            <div key={c.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Initials name={c.nombre} />
+                  <div className="min-w-0">
+                    <p className="font-medium text-gray-900 truncate">{c.nombre}</p>
+                    <p className="text-xs text-gray-400 truncate">{c.direccion}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button onClick={() => openEdit(c)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 cursor-pointer hover:bg-blue-50 transition-colors">
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button onClick={() => setDeleteTarget({ id: c.id, nombre: c.nombre })} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 cursor-pointer hover:bg-red-50 transition-colors">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="mt-3 pt-3 border-t border-gray-100 space-y-1">
+                <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                  <Mail className="h-3 w-3 text-gray-400 flex-shrink-0" /><span className="truncate">{c.email}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                  <Phone className="h-3 w-3 text-gray-400 flex-shrink-0" />{c.telefono}
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-xs text-gray-500 font-mono">{c.cuitDni}</span>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${c.activo ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${c.activo ? 'bg-green-500' : 'bg-gray-400'}`} />
+                    {c.activo ? 'Activo' : 'Inactivo'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop: table */}
+        <div className="hidden md:block bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-gray-50/70">

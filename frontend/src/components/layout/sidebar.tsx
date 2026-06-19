@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Building2,
   UserCircle,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { authService } from '@/services/auth.service';
@@ -51,7 +52,7 @@ function UserAvatar({ user }: { user: User }) {
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -73,13 +74,26 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-64 bg-gray-900 text-white flex flex-col h-screen sticky top-0">
+    <aside className={cn(
+      'fixed inset-y-0 left-0 z-50 md:relative md:inset-auto',
+      'w-64 bg-gray-900 text-white flex flex-col h-screen',
+      'transition-transform duration-300',
+      mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+    )}>
       <div className="p-6 border-b border-gray-700">
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center">
-            <Receipt className="h-5 w-5 text-white" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center">
+              <Receipt className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-xl font-bold">Facturación</span>
           </div>
-          <span className="text-xl font-bold">Facturación</span>
+          <button
+            onClick={onClose}
+            className="md:hidden p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
@@ -95,6 +109,7 @@ export function Sidebar() {
                 <Link
                   key={href}
                   href={href}
+                  onClick={onClose}
                   className={cn(
                     'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
                     active
@@ -113,6 +128,7 @@ export function Sidebar() {
             <Link
               key={href}
               href={href}
+              onClick={onClose}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
                 pathname.startsWith(href)
@@ -144,6 +160,7 @@ export function Sidebar() {
         )}
         <Link
           href="/perfil"
+          onClick={onClose}
           className={cn(
             'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
             pathname === '/perfil'

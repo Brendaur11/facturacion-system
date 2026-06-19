@@ -85,14 +85,14 @@ export default function FacturasPage() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Facturas</h1>
             <p className="text-sm text-gray-500 mt-0.5">
               {facturas.length} facturas{selected.size > 0 && ` · ${selected.size} seleccionadas`}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <DropdownMenu>
               <DropdownMenuTrigger className={cn(buttonVariants({ variant: 'outline' }), 'gap-2')} disabled={exporting}>
                 <Download className="h-4 w-4" />
@@ -123,7 +123,7 @@ export default function FacturasPage() {
         </div>
 
         {/* Filtros */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {['TODOS', ...ESTADOS].map((e) => (
             <button
               key={e}
@@ -140,8 +140,75 @@ export default function FacturasPage() {
           ))}
         </div>
 
-        {/* Table */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        {/* Mobile: cards */}
+        <div className="md:hidden space-y-3">
+          {loading ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
+                <div className="h-5 bg-gray-100 rounded animate-pulse mb-3" />
+                <div className="h-4 bg-gray-100 rounded animate-pulse w-3/4" />
+              </div>
+            ))
+          ) : facturas.length === 0 ? (
+            <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+              <FileText className="h-10 w-10 text-gray-200 mx-auto mb-3" />
+              <p className="text-sm font-medium text-gray-400">No hay facturas</p>
+              <Link href="/facturas/nueva" className="mt-3 inline-block text-xs text-blue-600 hover:underline">Crear primera factura</Link>
+            </div>
+          ) : facturas.map((f) => {
+            const style = estadoStyle[f.estado];
+            return (
+              <div key={f.id} className={cn('bg-white rounded-xl border border-gray-200 shadow-sm p-4', selected.has(f.id) && 'border-blue-300 bg-blue-50/30')}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <input type="checkbox" checked={selected.has(f.id)} onChange={() => toggleSelect(f.id)} className="rounded accent-blue-600 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <Link href={`/facturas/${f.id}`} className="font-semibold text-blue-700 hover:underline block">{f.numero}</Link>
+                      <p className="text-sm text-gray-600 truncate">{f.cliente?.nombre ?? '—'}</p>
+                    </div>
+                  </div>
+                  <div className="flex-shrink-0">
+                    {f.estado === 'ANULADA' ? (
+                      <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium', style.bg, style.text)}>
+                        {style.icon}{f.estado}
+                      </span>
+                    ) : (
+                      <Select value={f.estado} onValueChange={(v) => handleCambioEstado(f.id, v)}>
+                        <SelectTrigger className="border-0 shadow-none p-0 h-auto focus:ring-0">
+                          <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer', style.bg, style.text)}>
+                            {style.icon}{f.estado}
+                          </span>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ESTADOS.map((e) => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                  <span className="text-xs text-gray-400">{formatDate(f.fecha)}</span>
+                  <span className="font-semibold text-gray-900">{formatCurrency(Number(f.total))}</span>
+                </div>
+                <div className="flex items-center gap-4 mt-2">
+                  <button
+                    onClick={() => handleSendEmail(f.id)}
+                    disabled={sendingEmail.has(f.id)}
+                    title={f.cliente?.email ? `Enviar a ${f.cliente.email}` : 'El cliente no tiene email'}
+                    className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-600 transition-colors disabled:opacity-40 cursor-pointer"
+                  >
+                    {sendingEmail.has(f.id) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+                    Enviar
+                  </button>
+                  <Link href={`/facturas/${f.id}`} className="text-xs text-gray-400 hover:text-blue-600 font-medium transition-colors">Ver →</Link>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop: table */}
+        <div className="hidden md:block bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-gray-50/70">

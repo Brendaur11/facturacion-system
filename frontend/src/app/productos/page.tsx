@@ -104,12 +104,12 @@ export default function ProductosPage() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Productos</h1>
             <p className="text-sm text-gray-500 mt-0.5">{productos.length} productos registrados</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <input
               ref={fileInputRef}
               type="file"
@@ -137,7 +137,60 @@ export default function ProductosPage() {
           <Input placeholder="Buscar productos..." className="pl-9 bg-white" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        {/* Mobile: cards */}
+        <div className="md:hidden space-y-3">
+          {loading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
+                <div className="h-5 bg-gray-100 rounded animate-pulse mb-3" />
+                <div className="h-4 bg-gray-100 rounded animate-pulse w-3/4" />
+              </div>
+            ))
+          ) : productos.length === 0 ? (
+            <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+              <Package className="h-10 w-10 text-gray-200 mx-auto mb-3" />
+              <p className="text-sm font-medium text-gray-400">No se encontraron productos</p>
+              {search && <p className="text-xs text-gray-400 mt-1">Probá con otro término de búsqueda</p>}
+            </div>
+          ) : productos.map((p) => (
+            <div key={p.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
+                    <Package className="h-4 w-4 text-purple-500" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-medium text-gray-900 truncate">{p.nombre}</p>
+                    <p className="text-xs text-gray-400 truncate">{p.descripcion}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button onClick={() => openEdit(p)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 cursor-pointer transition-colors">
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button onClick={() => setDeleteTarget({ id: p.id, nombre: p.nombre })} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer transition-colors">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+                <span className="font-semibold text-gray-900">{formatCurrency(Number(p.precio))}</span>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-medium">
+                    <Tag className="h-3 w-3" />{p.unidad}
+                  </span>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${p.activo ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${p.activo ? 'bg-green-500' : 'bg-gray-400'}`} />
+                    {p.activo ? 'Activo' : 'Inactivo'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop: table */}
+        <div className="hidden md:block bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-gray-50/70">
