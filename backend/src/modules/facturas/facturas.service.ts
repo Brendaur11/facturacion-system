@@ -117,8 +117,8 @@ export class FacturasService {
     if (!factura.cliente?.email) {
       throw new BadRequestException('El cliente no tiene email registrado');
     }
-    const pdfBuffer = await buildPdf([factura]);
     try {
+      const pdfBuffer = await buildPdf([factura]);
       await this.mailerService.sendInvoice(factura.cliente.email, factura, pdfBuffer);
     } catch (err) {
       this.logger.error('Error al enviar email', err);

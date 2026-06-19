@@ -15,6 +15,9 @@ export class MailerService {
         user: configService.get<string>('MAIL_USER'),
         pass: configService.get<string>('MAIL_PASS'),
       },
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 15_000,
     });
   }
 
