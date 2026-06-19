@@ -76,7 +76,7 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose:
   return (
     <aside className={cn(
       'fixed inset-y-0 left-0 z-50 md:relative md:inset-auto',
-      'w-64 bg-gray-900 text-white flex flex-col h-screen',
+      'w-64 bg-gray-900 text-white flex flex-col h-dvh',
       'transition-transform duration-300',
       mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
     )}>
