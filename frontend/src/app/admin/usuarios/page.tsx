@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, Users, ShieldCheck, Shield, User as UserIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users, ShieldCheck, Shield, User as UserIcon, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { AppLayout } from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,7 @@ export default function AdminUsuariosPage() {
   const [editing, setEditing] = useState<Omit<User, 'password'> | null>(null);
   const [form, setForm] = useState<CreateUserPayload>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState<Omit<User, 'password'> | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -47,10 +48,11 @@ export default function AdminUsuariosPage() {
 
   useEffect(() => { load(); }, []);
 
-  function openCreate() { setEditing(null); setForm(emptyForm); setDialogOpen(true); }
+  function openCreate() { setEditing(null); setForm(emptyForm); setShowPassword(false); setDialogOpen(true); }
   function openEdit(u: Omit<User, 'password'>) {
     setEditing(u);
     setForm({ nombre: u.nombre, email: u.email, password: '', rol: u.rol, empresaId: u.empresaId ?? '' });
+    setShowPassword(false);
     setDialogOpen(true);
   }
 
@@ -226,7 +228,22 @@ export default function AdminUsuariosPage() {
             {!editing && (
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Contraseña *</Label>
-                <Input type="password" value={form.password} onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))} className="bg-gray-50 focus:bg-white" />
+                <div className="relative">
+                  <Input
+                    type={showPassword ? 'text' : 'password'}
+                    value={form.password}
+                    onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
+                    className="bg-gray-50 focus:bg-white pr-10"
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
             )}
             <div className="space-y-1.5">

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Camera, KeyRound, User as UserIcon, Mail, Shield, Building2 } from 'lucide-react';
+import { Camera, KeyRound, User as UserIcon, Mail, Shield, Building2, Eye, EyeOff } from 'lucide-react';
 import { authService } from '@/services/auth.service';
 import { empresaService } from '@/services/empresa.service';
 import { AppLayout } from '@/components/layout/app-layout';
@@ -59,6 +59,7 @@ export default function PerfilPage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPwd, setShowPwd] = useState({ currentPwd: false, newPwd: false, confirmPwd: false });
   const [savingPass, setSavingPass] = useState(false);
 
   useEffect(() => {
@@ -227,23 +228,33 @@ export default function PerfilPage() {
             Cambiar contraseña
           </h3>
           <form onSubmit={handleSavePassword} className="space-y-4">
-            {[
-              { label: 'Contraseña actual', value: currentPassword, setter: setCurrentPassword, id: 'currentPwd' },
-              { label: 'Nueva contraseña', value: newPassword, setter: setNewPassword, id: 'newPwd' },
-              { label: 'Confirmar nueva contraseña', value: confirmPassword, setter: setConfirmPassword, id: 'confirmPwd' },
-            ].map(({ label, value, setter, id }) => (
+            {([
+              { label: 'Contraseña actual',          value: currentPassword, setter: setCurrentPassword, id: 'currentPwd' as const },
+              { label: 'Nueva contraseña',            value: newPassword,     setter: setNewPassword,     id: 'newPwd'     as const },
+              { label: 'Confirmar nueva contraseña', value: confirmPassword,  setter: setConfirmPassword, id: 'confirmPwd' as const },
+            ]).map(({ label, value, setter, id }) => (
               <div key={id}>
                 <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
-                <input
-                  id={id}
-                  type="password"
-                  value={value}
-                  onChange={(e) => setter(e.target.value)}
-                  required
-                  minLength={6}
-                  placeholder="••••••••"
-                  className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 outline-none focus:border-gray-400 focus:ring-4 focus:ring-gray-100 transition-all"
-                />
+                <div className="relative">
+                  <input
+                    id={id}
+                    type={showPwd[id] ? 'text' : 'password'}
+                    value={value}
+                    onChange={(e) => setter(e.target.value)}
+                    required
+                    minLength={6}
+                    placeholder="••••••••"
+                    className="w-full h-10 px-3 pr-10 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 outline-none focus:border-gray-400 focus:ring-4 focus:ring-gray-100 transition-all"
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => setShowPwd((p) => ({ ...p, [id]: !p[id] }))}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                  >
+                    {showPwd[id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
             ))}
             <div className="flex justify-end">
