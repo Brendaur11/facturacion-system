@@ -71,9 +71,9 @@ export default function FacturaDetailPage() {
     <AppLayout>
       <div className="space-y-6 max-w-4xl">
         {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Link href="/facturas" className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'gap-1.5')}>
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Link href="/facturas" className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'gap-1.5 flex-shrink-0')}>
               <ArrowLeft className="h-4 w-4" /> Volver
             </Link>
             <div>
@@ -82,7 +82,7 @@ export default function FacturaDetailPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-wrap flex-shrink-0">
             {/* Estado — solo lectura si está ANULADA */}
             {factura.estado === 'ANULADA' ? (
               <span className={cn(
@@ -179,7 +179,22 @@ export default function FacturaDetailPage() {
           <div className="px-5 py-4 border-b bg-gray-50/70">
             <h2 className="text-sm font-semibold text-gray-700">Ítems de la factura</h2>
           </div>
-          <table className="w-full text-sm">
+
+          {/* Mobile: item cards */}
+          <div className="md:hidden divide-y divide-gray-100">
+            {factura.items?.map((item) => (
+              <div key={item.id} className="px-4 py-3 space-y-1">
+                <p className="text-sm font-medium text-gray-900">{item.descripcion}</p>
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>{item.cantidad} × {formatCurrency(Number(item.precioUnitario))}</span>
+                  <span className="font-semibold text-gray-800">{formatCurrency(Number(item.subtotal))}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: table */}
+          <table className="hidden md:table w-full text-sm">
             <thead>
               <tr className="border-b">
                 <th className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Descripción</th>
@@ -199,6 +214,7 @@ export default function FacturaDetailPage() {
               ))}
             </tbody>
           </table>
+
           <div className="border-t px-5 py-4 bg-gray-50/70">
             <div className="max-w-xs ml-auto space-y-2">
               <div className="flex justify-between text-sm text-gray-600">
