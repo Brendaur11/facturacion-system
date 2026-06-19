@@ -14,13 +14,13 @@ import { Empresa, User } from '@/types';
 
 const emptyForm: CreateEmpresaPayload = { nombre: '', cuit: '', direccion: '', telefono: '', email: '' };
 
-const FIELDS = [
+const FIELDS: Array<{ key: keyof CreateEmpresaPayload; label: string; type: string; inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'] }> = [
   { key: 'nombre',    label: 'Nombre *',  type: 'text'  },
-  { key: 'cuit',      label: 'CUIT',      type: 'text'  },
-  { key: 'email',     label: 'Email',     type: 'email' },
-  { key: 'telefono',  label: 'Teléfono',  type: 'text'  },
+  { key: 'cuit',      label: 'CUIT',      type: 'text',  inputMode: 'numeric' },
+  { key: 'email',     label: 'Email',     type: 'email', inputMode: 'email'   },
+  { key: 'telefono',  label: 'Teléfono',  type: 'text',  inputMode: 'tel'     },
   { key: 'direccion', label: 'Dirección', type: 'text'  },
-] as const;
+];
 
 export default function AdminEmpresasPage() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
@@ -56,8 +56,11 @@ export default function AdminEmpresasPage() {
     setDialogOpen(true);
   }
 
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
   async function handleSave() {
     if (!form.nombre.trim()) { toast.error('El nombre es obligatorio'); return; }
+    if (form.email && !emailRegex.test(form.email)) { toast.error('El email no tiene un formato válido'); return; }
     setSaving(true);
     try {
       if (editing) { await adminService.updateEmpresa(editing.id, form); toast.success('Empresa actualizada'); }
@@ -83,7 +86,7 @@ export default function AdminEmpresasPage() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Empresas</h1>
             <p className="text-sm text-gray-500 mt-0.5">{empresas.length} empresa{empresas.length !== 1 ? 's' : ''} registrada{empresas.length !== 1 ? 's' : ''}</p>
@@ -93,7 +96,62 @@ export default function AdminEmpresasPage() {
           </Button>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        {/* Mobile: cards */}
+        <div className="md:hidden space-y-3">
+          {loading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
+                <div className="h-5 bg-gray-100 rounded animate-pulse mb-3" />
+                <div className="h-4 bg-gray-100 rounded animate-pulse w-3/4" />
+              </div>
+            ))
+          ) : empresas.length === 0 ? (
+            <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+              <Building2 className="h-10 w-10 text-gray-200 mx-auto mb-3" />
+              <p className="text-sm font-medium text-gray-400">No hay empresas registradas</p>
+            </div>
+          ) : empresas.map((e) => {
+            const count = usuarios.filter((u) => u.empresaId === e.id).length;
+            return (
+              <div key={e.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                      <Building2 className="h-4 w-4 text-blue-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 truncate">{e.nombre}</p>
+                      <p className="text-xs text-gray-400 truncate">{e.direccion || '—'}</p>
+                    </div>
+                  </div>
+                  {canEdit && (
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button onClick={() => openEdit(e)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 cursor-pointer transition-colors">
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => setDeleteTarget(e)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer transition-colors">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-3 pt-3 border-t border-gray-100 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono text-gray-500">{e.cuit || '—'}</span>
+                    <span className="text-xs font-medium text-gray-600 bg-gray-100 px-2.5 py-0.5 rounded-full">
+                      {count} usuario{count !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  {e.email && <p className="text-xs text-gray-600">{e.email}</p>}
+                  {e.telefono && <p className="text-xs text-gray-400">{e.telefono}</p>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop: table */}
+        <div className="hidden md:block bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-gray-50/70">
@@ -168,10 +226,20 @@ export default function AdminEmpresasPage() {
             <DialogTitle>{editing ? 'Editar empresa' : 'Nueva empresa'}</DialogTitle>
           </DialogHeader>
           <DialogBody className="space-y-4">
-            {FIELDS.map(({ key, label, type }) => (
+            {FIELDS.map(({ key, label, type, inputMode }) => (
               <div key={key} className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">{label}</Label>
-                <Input type={type} value={form[key] ?? ''} onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))} className="bg-gray-50 focus:bg-white" />
+                <Input
+                  type={type}
+                  inputMode={inputMode}
+                  value={form[key] ?? ''}
+                  onChange={(e) => {
+                    let val = e.target.value;
+                    if (key === 'cuit' || key === 'telefono') val = val.replace(/[^0-9\-\s+]/g, '');
+                    setForm((p) => ({ ...p, [key]: val }));
+                  }}
+                  className="bg-gray-50 focus:bg-white"
+                />
               </div>
             ))}
           </DialogBody>

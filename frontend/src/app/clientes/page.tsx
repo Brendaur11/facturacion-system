@@ -70,7 +70,11 @@ export default function ClientesPage() {
     setDialogOpen(true);
   }
 
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
   async function handleSave() {
+    if (!form.nombre.trim()) { toast.error('El nombre es obligatorio'); return; }
+    if (form.email && !emailRegex.test(form.email)) { toast.error('El email no tiene un formato válido'); return; }
     setSaving(true);
     try {
       if (editing) { await clientesService.update(editing.id, form); toast.success('Cliente actualizado'); }
@@ -274,15 +278,26 @@ export default function ClientesPage() {
           </DialogHeader>
           <DialogBody className="space-y-4">
             {([
-              { key: 'nombre', label: 'Nombre completo' },
-              { key: 'email', label: 'Email' },
-              { key: 'telefono', label: 'Teléfono' },
-              { key: 'direccion', label: 'Dirección' },
-              { key: 'cuitDni', label: 'CUIT / DNI' },
-            ] as const).map(({ key, label }) => (
+              { key: 'nombre',   label: 'Nombre completo', type: 'text',  inputMode: 'text'    },
+              { key: 'email',    label: 'Email',           type: 'email', inputMode: 'email'   },
+              { key: 'telefono', label: 'Teléfono',        type: 'text',  inputMode: 'tel'     },
+              { key: 'direccion',label: 'Dirección',       type: 'text',  inputMode: 'text'    },
+              { key: 'cuitDni',  label: 'CUIT / DNI',      type: 'text',  inputMode: 'numeric' },
+            ] as const).map(({ key, label, type, inputMode }) => (
               <div key={key} className="space-y-1.5">
                 <Label htmlFor={key} className="text-sm font-medium text-gray-700">{label}</Label>
-                <Input id={key} value={form[key]} onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))} className="bg-gray-50 focus:bg-white" />
+                <Input
+                  id={key}
+                  type={type}
+                  inputMode={inputMode}
+                  value={form[key]}
+                  onChange={(e) => {
+                    let val = e.target.value;
+                    if (key === 'telefono' || key === 'cuitDni') val = val.replace(/[^0-9\-\s+]/g, '');
+                    setForm((p) => ({ ...p, [key]: val }));
+                  }}
+                  className="bg-gray-50 focus:bg-white"
+                />
               </div>
             ))}
           </DialogBody>

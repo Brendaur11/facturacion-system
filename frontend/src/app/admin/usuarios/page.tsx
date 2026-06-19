@@ -54,8 +54,11 @@ export default function AdminUsuariosPage() {
     setDialogOpen(true);
   }
 
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
   async function handleSave() {
     if (!form.nombre.trim() || !form.email.trim()) { toast.error('Nombre y email son obligatorios'); return; }
+    if (!emailRegex.test(form.email)) { toast.error('El email no tiene un formato válido'); return; }
     if (!editing && !form.password) { toast.error('La contraseña es obligatoria'); return; }
     setSaving(true);
     try {
@@ -90,7 +93,7 @@ export default function AdminUsuariosPage() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Usuarios</h1>
             <p className="text-sm text-gray-500 mt-0.5">{usuarios.length} usuario{usuarios.length !== 1 ? 's' : ''} registrado{usuarios.length !== 1 ? 's' : ''}</p>
@@ -100,7 +103,55 @@ export default function AdminUsuariosPage() {
           </Button>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        {/* Mobile: cards */}
+        <div className="md:hidden space-y-3">
+          {loading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
+                <div className="h-5 bg-gray-100 rounded animate-pulse mb-3" />
+                <div className="h-4 bg-gray-100 rounded animate-pulse w-3/4" />
+              </div>
+            ))
+          ) : usuarios.length === 0 ? (
+            <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+              <Users className="h-10 w-10 text-gray-200 mx-auto mb-3" />
+              <p className="text-sm font-medium text-gray-400">No hay usuarios registrados</p>
+            </div>
+          ) : usuarios.map((u) => {
+            const cfg = ROL_CONFIG[u.rol];
+            return (
+              <div key={u.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-medium text-gray-900 truncate">{u.nombre}</p>
+                    <p className="text-xs text-gray-400 truncate">{u.email}</p>
+                  </div>
+                  {canEdit && (
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button onClick={() => openEdit(u)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 cursor-pointer transition-colors">
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => setDeleteTarget(u)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer transition-colors">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${cfg.bg} ${cfg.color}`}>
+                    <cfg.Icon className="h-3 w-3" />{cfg.label}
+                  </span>
+                  <span className="text-xs text-gray-500 truncate">
+                    {u.empresaId ? (empresaMap[u.empresaId] ?? <span className="italic text-gray-400">Sin empresa</span>) : '—'}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop: table */}
+        <div className="hidden md:block bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-gray-50/70">
