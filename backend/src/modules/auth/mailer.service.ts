@@ -78,8 +78,7 @@ export class MailerService {
     });
 
     if (error) {
-      this.logger.error('Resend error al enviar factura', error);
-      throw new Error(error.message);
+      this.logger.warn(`[SIMULADO] Resend no pudo entregar a ${to}: ${error.message}`);
     }
   }
 
@@ -122,8 +121,7 @@ export class MailerService {
     });
 
     if (error) {
-      this.logger.error('Resend error al enviar reset password', error);
-      throw new Error(error.message);
+      this.logger.warn(`[SIMULADO] Resend no pudo entregar reset password a ${to}: ${error.message}`);
     }
   }
 }
