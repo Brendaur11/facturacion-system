@@ -1,11 +1,54 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { Menu } from 'lucide-react';
 import { Sidebar } from './sidebar';
+import { authService } from '@/services/auth.service';
+
+const INACTIVITY_MS = 30 * 60 * 1000; // 30 minutos
+const WARN_MS = 60 * 1000;            // aviso 1 minuto antes
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const router = useRouter();
+  const logoutTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const warnTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const warnToastId = useRef<string | number | null>(null);
+
+  useEffect(() => {
+    function doLogout() {
+      authService.logout();
+      document.cookie = 'token=; path=/; max-age=0';
+      router.push('/login');
+    }
+
+    function resetTimers() {
+      if (logoutTimer.current) clearTimeout(logoutTimer.current);
+      if (warnTimer.current)  clearTimeout(warnTimer.current);
+      if (warnToastId.current !== null) toast.dismiss(warnToastId.current);
+
+      warnTimer.current = setTimeout(() => {
+        warnToastId.current = toast.warning(
+          'Tu sesión cerrará en 1 minuto por inactividad',
+          { duration: WARN_MS },
+        );
+      }, INACTIVITY_MS - WARN_MS);
+
+      logoutTimer.current = setTimeout(doLogout, INACTIVITY_MS);
+    }
+
+    const EVENTS = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'] as const;
+    EVENTS.forEach((e) => window.addEventListener(e, resetTimers, { passive: true }));
+    resetTimers();
+
+    return () => {
+      EVENTS.forEach((e) => window.removeEventListener(e, resetTimers));
+      if (logoutTimer.current) clearTimeout(logoutTimer.current);
+      if (warnTimer.current)  clearTimeout(warnTimer.current);
+    };
+  }, [router]);
 
   return (
     <div className="flex h-dvh bg-gray-50">
