@@ -21,7 +21,7 @@ export default function LoginPage() {
       sessionStorage.setItem('token', token);
       sessionStorage.setItem('user', JSON.stringify(user));
       document.cookie = `token=${token}; path=/`;
-      router.push(user.rol === 'SUPERADMIN' ? '/admin' : '/dashboard');
+      router.push(user.rol === 'SUPERADMIN' || user.rol === 'ADMIN' ? '/admin' : '/dashboard');
     } catch {
       toast.error('Email o contraseña incorrectos');
     } finally {
