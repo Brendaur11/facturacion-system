@@ -184,7 +184,7 @@ export default function AdminUsuariosPage() {
                     </td>
                     <td className="px-5 py-4">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${cfg.bg} ${cfg.color}`}>
-                        <cfg.Icon className="h-3 w-3" />{cfg.label}
+                        <cfg.Icon className="h-3.5 w-3.5" />{cfg.label}
                       </span>
                     </td>
                     <td className="px-5 py-4 text-sm text-gray-600">
