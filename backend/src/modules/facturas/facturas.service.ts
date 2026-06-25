@@ -8,6 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MailerService } from '../auth/mailer.service';
+import { Cliente } from '../clientes/entities/cliente.entity';
 import { buildPdf } from '../export/builders/pdf.builder';
 import { CreateFacturaDto } from './dto/create-factura.dto';
 import { UpdateFacturaEstadoDto } from './dto/update-factura.dto';
@@ -24,6 +25,8 @@ export class FacturasService {
     private readonly facturasRepository: Repository<Factura>,
     @InjectRepository(FacturaItem)
     private readonly itemsRepository: Repository<FacturaItem>,
+    @InjectRepository(Cliente)
+    private readonly clientesRepository: Repository<Cliente>,
     private readonly mailerService: MailerService,
   ) {}
 
@@ -56,6 +59,9 @@ export class FacturasService {
 
   async create(createFacturaDto: CreateFacturaDto, empresaId: string) {
     const { items, clienteId, impuesto = 0, ...rest } = createFacturaDto;
+
+    const cliente = await this.clientesRepository.findOne({ where: { id: clienteId, empresaId } });
+    if (!cliente) throw new BadRequestException('El cliente no pertenece a esta empresa');
 
     const subtotal = items.reduce(
       (sum, item) => sum + item.cantidad * item.precioUnitario,

@@ -9,13 +9,13 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { SuperAdminGuard } from '../../common/guards/superadmin.guard';
+import { SuperAdminOnlyGuard } from '../../common/guards/superadmin-only.guard';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
 
 @ApiTags('Users')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, SuperAdminGuard)
+@UseGuards(JwtAuthGuard, SuperAdminOnlyGuard)
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
