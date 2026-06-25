@@ -9,6 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { SuperAdminGuard } from '../../common/guards/superadmin.guard';
 import { SuperAdminOnlyGuard } from '../../common/guards/superadmin-only.guard';
@@ -28,8 +29,8 @@ export class AdminController {
   // ── Dashboard ─────────────────────────────────────────────────────────
 
   @Get('dashboard')
-  getDashboard() {
-    return this.adminService.getDashboard();
+  getDashboard(@CurrentUser() requester: { rol: string; empresaId?: string }) {
+    return this.adminService.getDashboard(requester);
   }
 
   // ── Empresas ──────────────────────────────────────────────────────────
@@ -59,24 +60,32 @@ export class AdminController {
   // ── Usuarios ──────────────────────────────────────────────────────────
 
   @Get('usuarios')
-  findAllUsuarios() {
-    return this.adminService.findAllUsuarios();
+  findAllUsuarios(@CurrentUser() requester: { rol: string; empresaId?: string }) {
+    return this.adminService.findAllUsuarios(requester);
   }
 
   @Post('usuarios')
-  createUsuario(@Body() dto: CreateTenantUserDto) {
-    return this.adminService.createUsuario(dto);
+  createUsuario(
+    @CurrentUser() requester: { rol: string; empresaId?: string },
+    @Body() dto: CreateTenantUserDto,
+  ) {
+    return this.adminService.createUsuario(dto, requester);
   }
 
   @Patch('usuarios/:id')
-  @UseGuards(SuperAdminOnlyGuard)
-  updateUsuario(@Param('id') id: string, @Body() dto: UpdateTenantUserDto) {
-    return this.adminService.updateUsuario(id, dto);
+  updateUsuario(
+    @CurrentUser() requester: { rol: string; empresaId?: string },
+    @Param('id') id: string,
+    @Body() dto: UpdateTenantUserDto,
+  ) {
+    return this.adminService.updateUsuario(id, dto, requester);
   }
 
   @Delete('usuarios/:id')
-  @UseGuards(SuperAdminOnlyGuard)
-  removeUsuario(@Param('id') id: string) {
-    return this.adminService.removeUsuario(id);
+  removeUsuario(
+    @CurrentUser() requester: { rol: string; empresaId?: string },
+    @Param('id') id: string,
+  ) {
+    return this.adminService.removeUsuario(id, requester);
   }
 }

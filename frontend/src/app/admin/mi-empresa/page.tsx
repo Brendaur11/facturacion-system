@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -8,49 +9,50 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { empresaService } from '@/services/empresa.service';
-import { authService } from '@/services/auth.service';
 import { cn } from '@/lib/utils';
 
 const emptyForm = { nombre: '', cuit: '', direccion: '', telefono: '', email: '' };
 
-export default function ConfiguracionPage() {
+const fields: { key: keyof typeof emptyForm; label: string; placeholder: string; type?: string }[] = [
+  { key: 'nombre',    label: 'Nombre de la empresa',  placeholder: 'Mi Empresa S.A.'           },
+  { key: 'cuit',      label: 'CUIT',                   placeholder: '30-12345678-9'              },
+  { key: 'direccion', label: 'Dirección',              placeholder: 'Av. Corrientes 1234, CABA'  },
+  { key: 'telefono',  label: 'Teléfono',               placeholder: '011-4567-8900'              },
+  { key: 'email',     label: 'Email de contacto',      placeholder: 'contacto@empresa.com', type: 'email' },
+];
+
+export default function MiEmpresaPage() {
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const currentUser = authService.getStoredUser();
-  const canEdit = currentUser?.rol === 'ADMIN' || currentUser?.rol === 'SUPERADMIN';
 
   useEffect(() => {
     empresaService.get()
-      .then((e) => setForm({ nombre: e.nombre, cuit: e.cuit, direccion: e.direccion, telefono: e.telefono, email: e.email }))
-      .catch(() => toast.error('No se pudo cargar la configuración'))
+      .then((e) => setForm({ nombre: e.nombre, cuit: e.cuit ?? '', direccion: e.direccion ?? '', telefono: e.telefono ?? '', email: e.email ?? '' }))
+      .catch(() => toast.error('No se pudo cargar los datos de la empresa'))
       .finally(() => setLoading(false));
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.nombre.trim()) { toast.error('El nombre es obligatorio'); return; }
     setSaving(true);
-    try { await empresaService.update(form); toast.success('Configuración guardada'); }
-    catch { toast.error('Error al guardar la configuración'); }
-    finally { setSaving(false); }
+    try {
+      await empresaService.update(form);
+      toast.success('Datos de la empresa actualizados');
+    } catch {
+      toast.error('Error al guardar los cambios');
+    } finally {
+      setSaving(false);
+    }
   }
-
-  const fields: { key: keyof typeof emptyForm; label: string; placeholder: string; type?: string }[] = [
-    { key: 'nombre', label: 'Nombre de la empresa', placeholder: 'Mi Empresa S.A.' },
-    { key: 'cuit', label: 'CUIT', placeholder: '30-12345678-9' },
-    { key: 'direccion', label: 'Dirección', placeholder: 'Av. Corrientes 1234, CABA' },
-    { key: 'telefono', label: 'Teléfono', placeholder: '011-4567-8900' },
-    { key: 'email', label: 'Email de contacto', placeholder: 'contacto@empresa.com', type: 'email' },
-  ];
 
   return (
     <AppLayout>
       <div className="space-y-6 max-w-2xl">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Configuración</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            {canEdit ? 'Datos de tu empresa que aparecen en las facturas' : 'Datos de tu empresa (solo lectura)'}
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900">Mi Empresa</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Datos que aparecen en las facturas emitidas por tu empresa</p>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -67,7 +69,9 @@ export default function ConfiguracionPage() {
           <div className="p-6">
             {loading ? (
               <div className="space-y-4">
-                {Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded-lg animate-pulse" />)}
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="h-10 bg-gray-100 rounded-lg animate-pulse" />
+                ))}
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-5">
@@ -80,21 +84,18 @@ export default function ConfiguracionPage() {
                         type={type ?? 'text'}
                         placeholder={placeholder}
                         value={form[key]}
-                        onChange={(e) => canEdit && setForm((p) => ({ ...p, [key]: e.target.value }))}
-                        readOnly={!canEdit}
-                        className={cn('bg-gray-50 transition-colors', canEdit ? 'focus:bg-white' : 'cursor-default text-gray-500')}
+                        onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
+                        className="bg-gray-50 focus:bg-white transition-colors"
                       />
                     </div>
                   ))}
                 </div>
-                {canEdit && (
-                  <div className="pt-2 flex justify-end">
-                    <Button type="submit" disabled={saving} className="gap-2">
-                      <Save className="h-4 w-4" />
-                      {saving ? 'Guardando...' : 'Guardar cambios'}
-                    </Button>
-                  </div>
-                )}
+                <div className="pt-2 flex justify-end">
+                  <Button type="submit" disabled={saving} className="gap-2">
+                    <Save className="h-4 w-4" />
+                    {saving ? 'Guardando...' : 'Guardar cambios'}
+                  </Button>
+                </div>
               </form>
             )}
           </div>

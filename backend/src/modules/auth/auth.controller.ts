@@ -5,10 +5,12 @@ import {
   Get,
   Patch,
   Post,
+  Req,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
@@ -19,8 +21,8 @@ import {
 } from '@nestjs/swagger';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
-import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { LoginAttemptsService } from './login-attempts.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { SuperAdminGuard } from '../../common/guards/superadmin.guard';
 import { User } from '../users/entities/user.entity';
@@ -34,13 +36,25 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly loginAttempts: LoginAttemptsService,
+  ) {}
 
   @ApiOperation({ summary: 'Login — retorna JWT' })
-  @Throttle({ global: { limit: 5, ttl: 900_000 } })
   @Post('login')
-  login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async login(@Body() loginDto: LoginDto, @Req() req: any) {
+    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ?? req.ip ?? 'unknown';
+    this.loginAttempts.check(ip);
+    try {
+      const result = await this.authService.login(loginDto);
+      this.loginAttempts.reset(ip);
+      return result;
+    } catch (err) {
+      this.loginAttempts.increment(ip);
+      throw err;
+    }
   }
 
   @ApiOperation({ summary: 'Registrar nuevo usuario (solo SUPERADMIN)' })

@@ -20,6 +20,7 @@ export interface CreateUserPayload {
 export interface UpdateUserPayload {
   nombre?: string;
   email?: string;
+  password?: string;
   rol?: 'SUPERADMIN' | 'ADMIN' | 'USER';
   empresaId?: string;
 }

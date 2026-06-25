@@ -9,6 +9,7 @@ import { AppLayout } from '@/components/layout/app-layout';
 import { adminService } from '@/services/admin.service';
 import { AdminDashboard } from '@/types';
 import { formatCurrency } from '@/lib/utils';
+import { authService } from '@/services/auth.service';
 
 /* ── helpers ──────────────────────────────────────────────────────────── */
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -125,6 +126,8 @@ function BarChartGlobal({ data }: { data: AdminDashboard['facturasPorMes'] }) {
 export default function AdminDashboardPage() {
   const [data, setData] = useState<AdminDashboard | null>(null);
   const [loading, setLoading] = useState(true);
+  const user = authService.getStoredUser();
+  const isSuperAdmin = user?.rol === 'SUPERADMIN';
 
   useEffect(() => {
     adminService.getDashboard()
@@ -138,71 +141,85 @@ export default function AdminDashboardPage() {
       data.distribucionEstados.PAGADA + data.distribucionEstados.ANULADA
     : 0;
 
-  const stats = [
-    { label: 'Empresas activas',   value: data?.totales.empresas ?? 0,          icon: Building2,    iconBg: 'bg-blue-100',    iconColor: 'text-blue-600',    borderColor: 'border-l-blue-500'    },
-    { label: 'Usuarios',           value: data?.totales.usuarios ?? 0,          icon: Users,        iconBg: 'bg-purple-100',  iconColor: 'text-purple-600',  borderColor: 'border-l-purple-500'  },
-    { label: 'Facturas totales',   value: data?.totales.facturas ?? 0,          icon: FileText,     iconBg: 'bg-amber-100',   iconColor: 'text-amber-600',   borderColor: 'border-l-amber-500'   },
-    { label: 'Ingresos globales',  value: formatCurrency(data?.totales.ingresos ?? 0), icon: DollarSign, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', borderColor: 'border-l-emerald-500' },
-  ];
+  const stats = isSuperAdmin
+    ? [
+        { label: 'Empresas activas',  value: data?.totales.empresas ?? 0,                icon: Building2,  iconBg: 'bg-blue-100',    iconColor: 'text-blue-600',    borderColor: 'border-l-blue-500'    },
+        { label: 'Usuarios',          value: data?.totales.usuarios ?? 0,                icon: Users,      iconBg: 'bg-purple-100',  iconColor: 'text-purple-600',  borderColor: 'border-l-purple-500'  },
+        { label: 'Facturas totales',  value: data?.totales.facturas ?? 0,                icon: FileText,   iconBg: 'bg-amber-100',   iconColor: 'text-amber-600',   borderColor: 'border-l-amber-500'   },
+        { label: 'Ingresos globales', value: formatCurrency(data?.totales.ingresos ?? 0),icon: DollarSign, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', borderColor: 'border-l-emerald-500' },
+      ]
+    : [
+        { label: 'Usuarios de mi empresa', value: data?.totales.usuarios ?? 0,                icon: Users,      iconBg: 'bg-purple-100',  iconColor: 'text-purple-600',  borderColor: 'border-l-purple-500'  },
+        { label: 'Facturas emitidas',       value: data?.totales.facturas ?? 0,                icon: FileText,   iconBg: 'bg-amber-100',   iconColor: 'text-amber-600',   borderColor: 'border-l-amber-500'   },
+        { label: 'Ingresos cobrados',       value: formatCurrency(data?.totales.ingresos ?? 0),icon: DollarSign, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', borderColor: 'border-l-emerald-500' },
+      ];
 
   return (
     <AppLayout>
       <div className="space-y-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard global</h1>
-          <p className="text-sm text-gray-500 mt-1">Métricas consolidadas de todas las empresas</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {isSuperAdmin ? 'Dashboard global' : 'Dashboard'}
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            {isSuperAdmin
+              ? 'Métricas consolidadas de todas las empresas'
+              : 'Métricas de tu empresa'}
+          </p>
         </div>
 
         {/* Stat cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className={`grid grid-cols-1 gap-5 ${isSuperAdmin ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3'}`}>
           {stats.map((s) => <StatCard key={s.label} {...s} loading={loading} />)}
         </div>
 
-        {/* Top empresas */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
-            <TrendingUp className="h-4 w-4 text-gray-400" />
-            <h2 className="text-sm font-semibold text-gray-700">Top empresas por actividad</h2>
-          </div>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50/70 border-b">
-                {['Empresa','Facturas','Ingresos cobrados','Clientes','Productos'].map((h) => (
-                  <th key={h} className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading ? (
-                Array.from({ length: 3 }).map((_, i) => (
-                  <tr key={i}><td colSpan={5} className="px-5 py-4"><Skeleton className="h-6" /></td></tr>
-                ))
-              ) : !data || data.topEmpresas.length === 0 ? (
-                <tr><td colSpan={5} className="px-5 py-10 text-center text-sm text-gray-400">Sin datos todavía</td></tr>
-              ) : data.topEmpresas.map((e, i) => (
-                <tr key={e.id} className="hover:bg-gray-50/60 transition-colors">
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-2.5">
-                      <span className="w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-xs font-bold flex items-center justify-center flex-shrink-0">{i + 1}</span>
-                      <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                        <Building2 className="h-3.5 w-3.5 text-blue-500" />
-                      </div>
-                      <span className="font-medium text-gray-900">{e.nombre}</span>
-                    </div>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded-full">
-                      <FileText className="h-3 w-3" />{e.facturas}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5 font-semibold text-emerald-700">{formatCurrency(e.ingresos)}</td>
-                  <td className="px-5 py-3.5 text-gray-600">{e.clientes}</td>
-                  <td className="px-5 py-3.5 text-gray-600">{e.productos}</td>
+        {/* Top empresas — solo SUPERADMIN */}
+        {isSuperAdmin && (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
+              <TrendingUp className="h-4 w-4 text-gray-400" />
+              <h2 className="text-sm font-semibold text-gray-700">Top empresas por actividad</h2>
+            </div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50/70 border-b">
+                  {['Empresa','Facturas','Ingresos cobrados','Clientes','Productos'].map((h) => (
+                    <th key={h} className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {loading ? (
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <tr key={i}><td colSpan={5} className="px-5 py-4"><Skeleton className="h-6" /></td></tr>
+                  ))
+                ) : !data || data.topEmpresas.length === 0 ? (
+                  <tr><td colSpan={5} className="px-5 py-10 text-center text-sm text-gray-400">Sin datos todavía</td></tr>
+                ) : data.topEmpresas.map((e, i) => (
+                  <tr key={e.id} className="hover:bg-gray-50/60 transition-colors">
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-xs font-bold flex items-center justify-center flex-shrink-0">{i + 1}</span>
+                        <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                          <Building2 className="h-3.5 w-3.5 text-blue-500" />
+                        </div>
+                        <span className="font-medium text-gray-900">{e.nombre}</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded-full">
+                        <FileText className="h-3 w-3" />{e.facturas}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 font-semibold text-emerald-700">{formatCurrency(e.ingresos)}</td>
+                    <td className="px-5 py-3.5 text-gray-600">{e.clientes}</td>
+                    <td className="px-5 py-3.5 text-gray-600">{e.productos}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Charts row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -214,7 +231,9 @@ export default function AdminDashboardPage() {
                   <I key={idx} className="h-4 w-4 text-gray-300" />
                 ))}
               </div>
-              <h2 className="text-sm font-semibold text-gray-700">Estados globales</h2>
+              <h2 className="text-sm font-semibold text-gray-700">
+                {isSuperAdmin ? 'Estados globales' : 'Estados de facturas'}
+              </h2>
             </div>
             {loading ? (
               <div className="flex flex-col items-center gap-4">
@@ -226,11 +245,15 @@ export default function AdminDashboardPage() {
             ) : null}
           </div>
 
-          {/* Ingresos globales por mes */}
+          {/* Ingresos por mes */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 lg:col-span-2">
             <div className="flex items-center gap-2 mb-5">
               <BarChart3 className="h-4 w-4 text-gray-400" />
-              <h2 className="text-sm font-semibold text-gray-700">Ingresos cobrados globales · últimos 6 meses</h2>
+              <h2 className="text-sm font-semibold text-gray-700">
+                {isSuperAdmin
+                  ? 'Ingresos cobrados globales · últimos 6 meses'
+                  : 'Ingresos cobrados · últimos 6 meses'}
+              </h2>
             </div>
             {loading ? (
               <div className="flex items-end gap-3 h-36">

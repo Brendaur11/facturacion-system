@@ -2,6 +2,7 @@ import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { EmpresaId } from '../../common/decorators/empresa-id.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { SuperAdminGuard } from '../../common/guards/superadmin.guard';
 import { UpdateEmpresaDto } from './dto/update-empresa.dto';
 import { EmpresaService } from './empresa.service';
 
@@ -18,6 +19,7 @@ export class EmpresaController {
   }
 
   @Patch()
+  @UseGuards(SuperAdminGuard)
   update(@EmpresaId() empresaId: string, @Body() updateEmpresaDto: UpdateEmpresaDto) {
     return this.empresaService.update(empresaId, updateEmpresaDto);
   }

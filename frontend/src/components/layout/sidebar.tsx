@@ -29,10 +29,16 @@ const navItems = [
   { href: '/configuracion',  label: 'Configuración',   icon: Settings        },
 ];
 
+const superAdminNavItems = [
+  { href: '/admin',           label: 'Dashboard',   icon: LayoutDashboard, exact: true  },
+  { href: '/admin/empresas',  label: 'Empresas',    icon: Building2,       exact: false },
+  { href: '/admin/usuarios',  label: 'Usuarios',    icon: Users,           exact: false },
+];
+
 const adminNavItems = [
-  { href: '/admin',          label: 'Dashboard',       icon: LayoutDashboard, exact: true  },
-  { href: '/admin/empresas', label: 'Empresas',        icon: Building2,       exact: false },
-  { href: '/admin/usuarios', label: 'Usuarios',        icon: Users,           exact: false },
+  { href: '/admin',            label: 'Dashboard',   icon: LayoutDashboard, exact: true  },
+  { href: '/admin/mi-empresa', label: 'Mi Empresa',  icon: Building2,       exact: false },
+  { href: '/admin/usuarios',   label: 'Usuarios',    icon: Users,           exact: false },
 ];
 
 function UserAvatar({ user }: { user: User }) {
@@ -103,7 +109,7 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose:
             <p className="px-3 pt-1 pb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
               Administración
             </p>
-            {adminNavItems.map(({ href, label, icon: Icon, exact }) => {
+            {(isSuperAdmin ? superAdminNavItems : adminNavItems).map(({ href, label, icon: Icon, exact }) => {
               const active = exact ? pathname === href : pathname.startsWith(href);
               return (
                 <Link
