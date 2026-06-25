@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const publicRoutes = ['/login', '/recuperar-contrasena'];
 const adminRoutes = ['/admin'];
+const sharedRoutes = ['/perfil'];
 
 function decodePayload(token: string): Record<string, unknown> | null {
   try {
@@ -44,9 +45,17 @@ export function middleware(request: NextRequest) {
     return response;
   }
 
+  const role = getTokenRole(token);
+  const isAdminUser = role === 'SUPERADMIN' || role === 'ADMIN';
+
   const isAdminRoute = adminRoutes.some((r) => pathname === r || pathname.startsWith(r + '/'));
-  if (isAdminRoute && getTokenRole(token) !== 'SUPERADMIN' && getTokenRole(token) !== 'ADMIN') {
+  if (isAdminRoute && !isAdminUser) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
+  const isSharedRoute = sharedRoutes.some((r) => pathname === r || pathname.startsWith(r + '/'));
+  if (!isAdminRoute && !isSharedRoute && isAdminUser) {
+    return NextResponse.redirect(new URL('/admin', request.url));
   }
 
   return NextResponse.next();
