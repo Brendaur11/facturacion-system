@@ -152,7 +152,7 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose:
               <p className="text-xs text-gray-400 truncate">{user.email}</p>
               {isAdminOrAbove && (
                 <span className="mt-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-amber-500/20 text-amber-400">
-                  <ShieldCheck className="h-3 w-3" /> {isSuperAdmin ? 'Superadmin' : 'Admin'}
+                  <ShieldCheck className="h-3.5 w-3.5" /> {isSuperAdmin ? 'Superadmin' : 'Admin'}
                 </span>
               )}
             </div>
