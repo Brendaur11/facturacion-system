@@ -10,6 +10,6 @@ export default registerAs('database', (): TypeOrmModuleOptions => ({
   database: process.env.DB_NAME,
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   migrations: [__dirname + '/../database/migrations/*{.ts,.js}'],
-  synchronize: process.env.NODE_ENV === 'development',
+  synchronize: process.env.DB_SYNCHRONIZE === 'true' || process.env.NODE_ENV === 'development',
   logging: process.env.NODE_ENV === 'development',
 }));
